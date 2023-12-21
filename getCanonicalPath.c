@@ -87,28 +87,74 @@ static _TCHAR *__getCanonicalPath(const _TCHAR *lpFileName)
 }
 
 /**
+ * Check if path begins with drive letter + colon + separator.
+ *
+ * The separator is required because "x:" without a separator
+ * refers to the current working directory on drive "x:".
+ * So if the current working directory on "c:" was "Users\Joe" then
+ * "c:Windows" would actually resolve to "c:\Users\Joe\Windows" and
+ * not "c:\Windows".
+ */
+static BOOL is_absolute_path(const _TCHAR *p)
+{
+    /* skip leading namespace specifier */
+    if (_tcslen(p) > 3 && p[0] == _T('\\') &&
+        (_tcsncmp(p, _T("\\" "\\" "?" "\\"), 4) == 0 || /* "\\?\" file namespace */
+         _tcsncmp(p, _T("\\" "\\" "." "\\"), 4) == 0 || /* "\\.\" device namespace */
+         _tcsncmp(p, _T("\\" "?"  "?" "\\"), 4) == 0))  /* "\??\" NT namespace? */
+    {
+        p += 4;
+    }
+
+    /* drive letter + colon + separator, i.e. "C:\" or "z:/" */
+    if (_tcslen(p) > 2 &&
+        p[1] == _T(':') &&
+        (p[2] == _T('\\') || p[2] == _T('/')) &&
+        ((p[0] >= _T('A') && p[0] <= _T('Z')) ||
+         (p[0] >= _T('a') && p[0] <= _T('z'))))
+    {
+        return TRUE;
+    }
+
+    return FALSE;
+}
+
+/**
  * Result must be deallocated with free().
  */
 _TCHAR *getCanonicalPath(const _TCHAR *lpFileName)
 {
     _TCHAR *pathBuf, *linkBuf;
+    ULONG ulReparseTag = 0;
 
     pathBuf = __getCanonicalPath(lpFileName);
     if (pathBuf) return pathBuf;
 
     /* __getCanonicalPath() has failed.
-     * Treat lpFileName as a symbolic link
-     * and try to get its target. */
-    linkBuf = getLinkTarget(lpFileName);
-
-    /* lpFileName is not a symbolic link, does not exist,
-     * or some other error had occurred. */
+     * Treat lpFileName as a symbolic link and try to get its target. */
+    linkBuf = getLinkTarget(lpFileName, (ULONG *)&ulReparseTag);
     if (!linkBuf) return NULL;
 
+    /* We cannot reliably resolve LXSS symlinks to their Windows counterparts
+     * using GetFinalPathNameByHandle.
+     * For example a link target "C:/Windows" could be a relative path inside a
+     * Wine prefix whereas "/mnt/c/Windows" may actually be the real location
+     * of "C:\Windows". */
+    if (ulReparseTag == IO_REPARSE_TAG_LX_SYMLINK) {
+        SetLastError(ERROR_NOT_SUPPORTED);
+        return NULL;
+    }
+
     /* Try again with the link target.
-     * This kind of second attempt seems to be required
-     * when trying to canonicalize AppExec links. */
-    pathBuf = __getCanonicalPath(linkBuf);
+     * This kind of second attempt seems to be required on AppExec links.
+     * To prevent an erronous canonicalization we should only do a second
+     * attempt on an absolute path. */
+    if (is_absolute_path(linkBuf)) {
+        pathBuf = __getCanonicalPath(linkBuf);
+    } else {
+        SetLastError(ERROR_NOT_SUPPORTED);
+    }
+
     free(linkBuf);
 
     return pathBuf;

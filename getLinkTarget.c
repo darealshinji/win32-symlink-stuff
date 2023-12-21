@@ -29,10 +29,6 @@
 #include "isSymlink.h"
 #include "getLinkTarget.h"
 
-#ifndef IO_REPARSE_TAG_LXSS_SYMLINK
-#define IO_REPARSE_TAG_LXSS_SYMLINK  (0xA000001DL)
-#endif
-
 
 /**
  * https://learn.microsoft.com/en-us/windows-hardware/drivers/ddi/ntifs/ns-ntifs-_reparse_data_buffer
@@ -125,14 +121,13 @@ static char *convert_wcs_to_str(const wchar_t *lpWstr)
 #endif
 
 
-_TCHAR *getLinkTarget(const _TCHAR *lpFileName)
+_TCHAR *getLinkTarget(const _TCHAR *lpFileName, ULONG *pReparseTag)
 {
     UINT8 data[MAXIMUM_REPARSE_DATA_BUFFER_SIZE];
     REPARSE_DATA_BUFFER *pData;
     const wchar_t *pwStr;
     const char *pszStr;
     HANDLE hPath;
-    DWORD dwAttr;
     size_t len, i;
     wchar_t *pwBuf;
     char *buf;
@@ -178,6 +173,10 @@ _TCHAR *getLinkTarget(const _TCHAR *lpFileName)
     pwStr = NULL;
     len = 0;
 
+    if (pReparseTag) {
+        *pReparseTag = pData->ReparseTag;
+    }
+
     /* read the link target for each type of symbolic link */
     switch (pData->ReparseTag) {
         /* symbolic links */
@@ -214,7 +213,7 @@ _TCHAR *getLinkTarget(const _TCHAR *lpFileName)
 #endif
 
         /* Linux links */
-        case IO_REPARSE_TAG_LXSS_SYMLINK:
+        case IO_REPARSE_TAG_LX_SYMLINK:
             pszStr = pData->LxSymbolicLinkReparseBuffer.PathBuffer;
             len = pData->ReparseDataLength - sizeof(pData->LxSymbolicLinkReparseBuffer.Unused);
 

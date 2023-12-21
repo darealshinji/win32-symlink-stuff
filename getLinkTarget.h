@@ -32,11 +32,30 @@
 #define getLinkTarget getLinkTargetA
 #endif
 
+/* https://learn.microsoft.com/en-us/openspecs/windows_protocols/ms-fscc/c8e77b37-3909-4fe6-a4ea-2b9d423b1ee4 */
+#ifndef IO_REPARSE_TAG_SYMLINK
+#define IO_REPARSE_TAG_SYMLINK      (0xA000000C)
+#endif
+#ifndef IO_REPARSE_TAG_MOUNT_POINT
+#define IO_REPARSE_TAG_MOUNT_POINT  (0xA0000003)
+#endif
+#ifndef IO_REPARSE_TAG_APPEXECLINK
+#define IO_REPARSE_TAG_APPEXECLINK  (0x8000001B)
+#endif
+#ifndef IO_REPARSE_TAG_LX_SYMLINK
+#define IO_REPARSE_TAG_LX_SYMLINK   (0xA000001D)
+#endif
+
+
 /**
  * getLinkTarget() will return an allocated string with the link's target.
- * This function is similar to POSIX's `readlink(2)`
+ * This function is similar to POSIX's `readlink(2)`.
+ *
+ * pReparseTag is a pointer to the variable where the Reparse Tag will be
+ * saved if reading the reparse data was successful. This can be used to
+ * figure out what type of link this is.
  */
-char    *getLinkTargetA(const char *lpFileName);
-wchar_t *getLinkTargetW(const wchar_t *lpFileName);
+char    *getLinkTargetA(const char *lpFileName, ULONG *pReparseTag);
+wchar_t *getLinkTargetW(const wchar_t *lpFileName, ULONG *pReparseTag);
 
 #endif /* _GETLINKTARGET_H_ */

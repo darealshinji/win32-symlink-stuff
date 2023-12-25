@@ -22,23 +22,36 @@
  * THE SOFTWARE
  */
 #include <windows.h>
-#include <tchar.h>
+#include <wchar.h>
 
 #include "isSymlink.h"
 
 
-BOOL isSymlink(const _TCHAR *lpFileName)
+int isSymlinkW(const wchar_t *path)
 {
-    DWORD dwAttr = GetFileAttributes(lpFileName);
+    DWORD dwAttr = GetFileAttributesW(path);
 
     if (dwAttr == INVALID_FILE_ATTRIBUTES) {
-        /* error */
-        return FALSE;
+        return -1;
     }
 
-    /* Set this explicitly to distinguish a regular FALSE return
-     * value from an error. */
-    SetLastError(ERROR_SUCCESS);
+    return (dwAttr & FILE_ATTRIBUTE_REPARSE_POINT) ? 1 : 0;
+}
 
-    return (dwAttr & FILE_ATTRIBUTE_REPARSE_POINT) ? TRUE : FALSE;
+int isSymlinkA(const char *path)
+{
+    DWORD dwAttr;
+    wchar_t *wstr;
+
+    wstr = convert_str_to_wcs(path);
+    if (!wstr) return -1;
+
+    dwAttr = GetFileAttributesW(wstr);
+    free(wstr);
+
+    if (dwAttr == INVALID_FILE_ATTRIBUTES) {
+        return -1;
+    }
+
+    return (dwAttr & FILE_ATTRIBUTE_REPARSE_POINT) ? 1 : 0;
 }

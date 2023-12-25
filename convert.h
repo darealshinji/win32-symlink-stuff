@@ -21,24 +21,16 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE
  */
-#ifndef _ISSYMLINK_H_
-#define _ISSYMLINK_H_
+#ifndef _CONVERT_H_
+#define _CONVERT_H_
 
 #include <windows.h>
 
-#ifdef _UNICODE
-#define isSymlink isSymlinkW
-#else
-#define isSymlink isSymlinkA
-#endif
-
 /**
- * Return values of isSymlink():
- *  1  lpFileName is a symbolic link
- *  0  lpFileName exists and is NOT a symbolic link
- * -1  an error has occured (i.e. lpFileName does not exist)
+ * The returned string must be deallocated with free().
  */
-int isSymlinkA(const char *lpFileName);
-int isSymlinkW(const wchar_t *lpFileName);
+char *convert_wcs_to_str(const wchar_t *wcs);
+wchar_t *convert_str_to_wcs(const char *str);
+wchar_t *convert_utf8_to_wcs(const char *str);
 
-#endif /* _ISSYMLINK_H_ */
+#endif /* _CONVERT_H_ */

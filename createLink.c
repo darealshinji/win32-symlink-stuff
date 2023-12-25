@@ -22,9 +22,10 @@
  * THE SOFTWARE
  */
 #include <windows.h>
-#include <tchar.h>
+#include <wchar.h>
 
 #include "createLink.h"
+#include "convert.h"
 
 /* https://learn.microsoft.com/en-us/windows/win32/api/winbase/nf-winbase-createsymboliclinkw */
 #ifndef SYMBOLIC_LINK_FLAG_DIRECTORY
@@ -35,36 +36,55 @@
 #endif
 
 #ifndef CreateSymbolicLink
-extern BOOLEAN CreateSymbolicLinkA(LPCSTR lpLinkName, LPCSTR lpTargetName, DWORD dwFlags);
-extern BOOLEAN CreateSymbolicLinkW(LPCWSTR lpLinkName, LPCWSTR lpTargetName, DWORD dwFlags);
-#ifdef _UNICODE
-#define CreateSymbolicLink CreateSymbolicLinkW
-#else
-#define CreateSymbolicLink CreateSymbolicLinkA
-#endif
+extern BOOLEAN CreateSymbolicLinkW(LPCWSTR lpSymlinkFileName, LPCWSTR lpTargetFileName, DWORD dwFlags);
 #endif
 
 
-BOOL createLink(const _TCHAR *lpLinkName, const _TCHAR *lpTargetName, char mode)
+BOOL createLinkA(const char *link, const char *target, char mode)
 {
-    DWORD dwFlags = SYMBOLIC_LINK_FLAG_ALLOW_UNPRIVILEGED_CREATE;
+    wchar_t *wcs_link, *wcs_target;
+    BOOL ret;
+
+    /* convert strings */
+    wcs_link = convert_str_to_wcs(link);
+    if (!wcs_link) return FALSE;
+
+    wcs_target = convert_str_to_wcs(target);
+
+    if (!wcs_target) {
+        free(wcs_link);
+        return FALSE;
+    }
+
+    /* call wide character function */
+    ret = createLinkW(wcs_link, wcs_target, mode);
+
+    free(wcs_link);
+    free(wcs_target);
+
+    return ret;
+}
+
+BOOL createLinkW(const wchar_t *link, const wchar_t *target, char mode)
+{
+    DWORD flags = SYMBOLIC_LINK_FLAG_ALLOW_UNPRIVILEGED_CREATE;
 
     if (mode == 'h' || mode == 'H') {
         /* hard link */
-        return CreateHardLink(lpLinkName, lpTargetName, NULL);
+        return CreateHardLinkW(link, target, NULL);
     } else if (mode == 'd' || mode == 'D') {
         /* symbolic link to directory */
-        dwFlags |= SYMBOLIC_LINK_FLAG_DIRECTORY;
+        flags |= SYMBOLIC_LINK_FLAG_DIRECTORY;
     }
 
     /* create symbolic link */
-    if (CreateSymbolicLink(lpLinkName, lpTargetName, dwFlags)) {
+    if (CreateSymbolicLinkW(link, target, flags)) {
         return TRUE;
     }
 
     /* failure: remove this flag and try again */
-    dwFlags &= ~SYMBOLIC_LINK_FLAG_ALLOW_UNPRIVILEGED_CREATE;
+    flags &= ~SYMBOLIC_LINK_FLAG_ALLOW_UNPRIVILEGED_CREATE;
 
-    return CreateSymbolicLink(lpLinkName, lpTargetName, dwFlags);
+    return CreateSymbolicLinkW(link, target, flags);
 }
 

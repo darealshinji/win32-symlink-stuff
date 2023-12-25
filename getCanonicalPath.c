@@ -22,65 +22,60 @@
  * THE SOFTWARE
  */
 #include <windows.h>
-#include <tchar.h>
+#include <wchar.h>
 #include <stdlib.h>
 #include <stdio.h>
 
+#include "convert.h"
 #include "getCanonicalPath.h"
 #include "getLinkTarget.h"
 
 #ifndef GetFinalPathNameByHandle
-extern DWORD GetFinalPathNameByHandleA(HANDLE hFile, LPSTR lpszFilePath, DWORD cchFilePath, DWORD dwFlags);
 extern DWORD GetFinalPathNameByHandleW(HANDLE hFile, LPWSTR lpszFilePath, DWORD cchFilePath, DWORD dwFlags);
-#ifdef _UNICODE
-#define GetFinalPathNameByHandle GetFinalPathNameByHandleW
-#else
-#define GetFinalPathNameByHandle GetFinalPathNameByHandleA
-#endif
 #endif
 
 
 /**
  * Result must be deallocated with free().
  */
-static _TCHAR *__getCanonicalPath(const _TCHAR *lpFileName)
+static wchar_t *canonical_path(const wchar_t *path)
 {
-    _TCHAR *buf = NULL;
-    HANDLE hPath;
-    DWORD dwLen;
+    wchar_t *buf = NULL;
+    HANDLE handle;
+    DWORD len;
 
-    const DWORD dwFlags =
+    const DWORD flags =
         FILE_NAME_NORMALIZED | /* Normalize the path. -> This is what we want! */
         VOLUME_NAME_DOS;       /* Return path with drive letter (uses "\\?\" syntax). */
 
-    /* open lpFileName for reading */
-    hPath = CreateFile(lpFileName,
-                       0,
-                       FILE_SHARE_READ | FILE_SHARE_WRITE,
-                       NULL,
-                       OPEN_EXISTING,
-                       FILE_FLAG_BACKUP_SEMANTICS,
-                       NULL);
+    /* open for reading */
+    handle = CreateFileW(path,
+                         0,
+                         FILE_SHARE_READ | FILE_SHARE_WRITE,
+                         NULL,
+                         OPEN_EXISTING,
+                         FILE_FLAG_BACKUP_SEMANTICS,
+                         NULL);
 
-    if (hPath == INVALID_HANDLE_VALUE) {
+    if (handle == INVALID_HANDLE_VALUE) {
         return NULL;
     }
 
     /* figure out length */
-    dwLen = GetFinalPathNameByHandle(hPath, NULL, 0, dwFlags);
+    len = GetFinalPathNameByHandleW(handle, NULL, 0, flags);
 
-    if (dwLen > 0) {
-        buf = malloc((dwLen + 1) * sizeof(_TCHAR));
+    if (len > 0) {
+        buf = malloc((len + 1) * sizeof(wchar_t));
 
         /* resolve path from handle */
-        if (buf && GetFinalPathNameByHandle(hPath, buf, dwLen+1, dwFlags) > 0) {
-            buf[dwLen] = _T('\0');
-            CloseHandle(hPath);
+        if (buf && GetFinalPathNameByHandleW(handle, buf, len+1, flags) > 0) {
+            buf[len] = 0;
+            CloseHandle(handle);
             return buf;
         }
     }
 
-    CloseHandle(hPath);
+    CloseHandle(handle);
     if (buf) free(buf);
 
     return NULL;
@@ -95,23 +90,22 @@ static _TCHAR *__getCanonicalPath(const _TCHAR *lpFileName)
  * "c:Windows" would actually resolve to "c:\Users\Joe\Windows" and
  * not "c:\Windows".
  */
-static BOOL is_absolute_path(const _TCHAR *p)
+static BOOL is_absolute_path(const wchar_t *p)
 {
     /* skip leading namespace specifier */
-    if (_tcslen(p) > 3 && p[0] == _T('\\') &&
-        (_tcsncmp(p, _T("\\" "\\" "?" "\\"), 4) == 0 || /* "\\?\" file namespace */
-         _tcsncmp(p, _T("\\" "\\" "." "\\"), 4) == 0 || /* "\\.\" device namespace */
-         _tcsncmp(p, _T("\\" "?"  "?" "\\"), 4) == 0))  /* "\??\" NT namespace? */
+    if (wcslen(p) > 3 && p[0] == L'\\' &&
+        (wcsncmp(p, L"\\" "\\" "?" "\\", 4) == 0 || /* "\\?\" file namespace */
+         wcsncmp(p, L"\\" "\\" "." "\\", 4) == 0 || /* "\\.\" device namespace */
+         wcsncmp(p, L"\\" "?"  "?" "\\", 4) == 0))  /* "\??\" NT namespace? */
     {
         p += 4;
     }
 
     /* drive letter + colon + separator, i.e. "C:\" or "z:/" */
-    if (_tcslen(p) > 2 &&
-        p[1] == _T(':') &&
-        (p[2] == _T('\\') || p[2] == _T('/')) &&
-        ((p[0] >= _T('A') && p[0] <= _T('Z')) ||
-         (p[0] >= _T('a') && p[0] <= _T('z'))))
+    if (wcslen(p) > 2 && p[1] == L':' &&
+        (p[2] == L'\\' || p[2] == L'/') &&
+        ((p[0] >= L'A' && p[0] <= L'Z') ||
+         (p[0] >= L'a' && p[0] <= L'z')))
     {
         return TRUE;
     }
@@ -119,28 +113,49 @@ static BOOL is_absolute_path(const _TCHAR *p)
     return FALSE;
 }
 
+char *getCanonicalPathA(const char *path)
+{
+    wchar_t *wcs_in, *wcs_out;
+    char *buf;
+
+    /* convert string */
+    wcs_in = convert_str_to_wcs(path);
+    if (!wcs_in) return NULL;
+
+    /* call wide character function */
+    wcs_out = getCanonicalPathW(wcs_in);
+    free(wcs_in);
+    if (!wcs_out) return NULL;
+
+    /* convert string */
+    buf = convert_wcs_to_str(wcs_out);
+    free(wcs_out);
+
+    return buf;
+}
+
 /**
  * Result must be deallocated with free().
  */
-_TCHAR *getCanonicalPath(const _TCHAR *lpFileName)
+wchar_t *getCanonicalPathW(const wchar_t *path)
 {
-    _TCHAR *pathBuf, *linkBuf;
-    ULONG ulReparseTag = 0;
+    wchar_t *buf, *link;
+    ULONG tag = 0;
 
-    pathBuf = __getCanonicalPath(lpFileName);
-    if (pathBuf) return pathBuf;
+    buf = canonical_path(path);
+    if (buf) return buf;
 
-    /* __getCanonicalPath() has failed.
-     * Treat lpFileName as a symbolic link and try to get its target. */
-    linkBuf = getLinkTarget(lpFileName, (ULONG *)&ulReparseTag);
-    if (!linkBuf) return NULL;
+    /* canonical_path() has failed.
+     * Treat path as a symbolic link and try to get its target. */
+    link = getLinkTargetW(path, (ULONG *)&tag);
+    if (!link) return NULL;
 
     /* We cannot reliably resolve LXSS symlinks to their Windows counterparts
      * using GetFinalPathNameByHandle.
      * For example a link target "C:/Windows" could be a relative path inside a
      * Wine prefix whereas "/mnt/c/Windows" may actually be the real location
      * of "C:\Windows". */
-    if (ulReparseTag == IO_REPARSE_TAG_LX_SYMLINK) {
+    if (tag == IO_REPARSE_TAG_LX_SYMLINK) {
         SetLastError(ERROR_NOT_SUPPORTED);
         return NULL;
     }
@@ -149,13 +164,13 @@ _TCHAR *getCanonicalPath(const _TCHAR *lpFileName)
      * This kind of second attempt seems to be required on AppExec links.
      * To prevent an erronous canonicalization we should only do a second
      * attempt on an absolute path. */
-    if (is_absolute_path(linkBuf)) {
-        pathBuf = __getCanonicalPath(linkBuf);
+    if (is_absolute_path(link)) {
+        buf = canonical_path(link);
     } else {
         SetLastError(ERROR_NOT_SUPPORTED);
     }
 
-    free(linkBuf);
+    free(link);
 
-    return pathBuf;
+    return buf;
 }

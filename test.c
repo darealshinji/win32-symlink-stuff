@@ -1,7 +1,8 @@
+#include "convert.c"
 #include "createLink.c"
-#include "getCanonicalPath.c"
 #include "getLinkTarget.c"
 #include "isSymlink.c"
+#include "getCanonicalPath.c"
 
 #define TEST(x)  puts((x) ? "success" : "failure")
 
@@ -12,12 +13,12 @@ int main()
     DeleteFileA(lnk);
     RemoveDirectoryA(lnk);
 
-    puts("test createLink");
-    TEST(createLink(lnk, "c:/", 'd') == TRUE);
+    puts("test createLinkA");
+    TEST(createLinkA(lnk, "c:/", 'd') == TRUE);
     puts("");
 
-    puts("test getCanonicalPath");
-    char *path = getCanonicalPath("./././link_to_C");
+    puts("test getCanonicalPathA");
+    char *path = getCanonicalPathA("./././link_to_C");
     TEST(path);
 
     if (path) {
@@ -26,9 +27,9 @@ int main()
     }
     puts("");
 
-    puts("test getLinkTarget");
+    puts("test getLinkTargetA");
     ULONG tag = 0;
-    path = getLinkTarget(lnk, (ULONG *)&tag);
+    path = getLinkTargetA(lnk, (ULONG *)&tag);
     TEST(path && tag == IO_REPARSE_TAG_SYMLINK);
 
     if (path) {
@@ -37,8 +38,8 @@ int main()
     }
     puts("");
 
-    puts("test isSymlink");
-    TEST(isSymlink(lnk) == TRUE);
+    puts("test isSymlinkA");
+    TEST(isSymlinkA(lnk) == TRUE);
 
     return 0;
 }

@@ -22,10 +22,11 @@
  * THE SOFTWARE
  */
 #include <windows.h>
-#include <tchar.h>
+#include <wchar.h>
 #include <stdlib.h>
 #include <string.h>
 
+#include "convert.h"
 #include "isSymlink.h"
 #include "getLinkTarget.h"
 
@@ -75,181 +76,159 @@ typedef struct _REPARSE_DATA_BUFFER {
   } DUMMYUNIONNAME;
 } REPARSE_DATA_BUFFER, *PREPARSE_DATA_BUFFER;
 
-
-#ifdef _UNICODE
-static wchar_t *convert_utf8_to_wcs(const char *lpStr)
-{
-    int wlen, mbslen;
-    wchar_t *pwBuf = NULL;
-
-    mbslen = (int)strlen(lpStr);
-    wlen = MultiByteToWideChar(CP_UTF8, 0, lpStr, mbslen, NULL, 0);
-    if (wlen < 1) return NULL;
-
-    pwBuf = malloc((wlen + 1) * sizeof(wchar_t));
-    if (!pwBuf) return NULL;
-
-    if (MultiByteToWideChar(CP_UTF8, 0, lpStr, mbslen, pwBuf, wlen) < 1) {
-        free(pwBuf);
-        return NULL;
-    }
-
-    pwBuf[wlen] = L'\0';
-    return pwBuf;
-}
-#else
-static char *convert_wcs_to_str(const wchar_t *lpWstr)
-{
-    size_t mbslen, n;
-    char *buf;
-
-    if (wcstombs_s(&mbslen, NULL, 0, lpWstr, 0) != 0 || mbslen == 0) {
-        return NULL;
-    }
-
-    buf = malloc(mbslen + 1);
-    if (!buf) return NULL;
-
-    if (wcstombs_s(&n, buf, mbslen+1, lpWstr, mbslen) != 0 || n == 0) {
-        free(buf);
-        return NULL;
-    }
-
-    buf[mbslen] = '\0';
-    return buf;
-}
-#endif
+typedef struct {
+  ULONG tag;
+  wchar_t *wide_string;
+  char *utf8_string;
+} LINK_TARGET;
 
 
-_TCHAR *getLinkTarget(const _TCHAR *lpFileName, ULONG *pReparseTag)
+static BOOL get_link_target(const wchar_t *path, LINK_TARGET *ltarget)
 {
     UINT8 data[MAXIMUM_REPARSE_DATA_BUFFER_SIZE];
     REPARSE_DATA_BUFFER *pData;
-    const wchar_t *pwStr;
-    const char *pszStr;
-    HANDLE hPath;
+    HANDLE handle;
+    wchar_t *wstr;
     size_t len, i;
-    wchar_t *pwBuf;
-    char *buf;
 
-    if (!isSymlink(lpFileName)) {
+    if (!isSymlinkW(path)) {
         if (GetLastError() == ERROR_SUCCESS) {
-            /* lpFileName exists but is not a symbolic link */
+            /* path exists but is not a symbolic link */
             SetLastError(ERROR_NOT_SUPPORTED);
         }
-        return NULL;
+        return FALSE;
     }
 
     /* open path for reading */
-    hPath = CreateFile(lpFileName,
-                       0,
-                       FILE_SHARE_READ | FILE_SHARE_WRITE,
-                       NULL,
-                       OPEN_EXISTING,
-                       FILE_FLAG_OPEN_REPARSE_POINT | FILE_FLAG_BACKUP_SEMANTICS,
-                       NULL);
+    handle = CreateFileW(path,
+                         0,
+                         FILE_SHARE_READ | FILE_SHARE_WRITE,
+                         NULL,
+                         OPEN_EXISTING,
+                         FILE_FLAG_OPEN_REPARSE_POINT | FILE_FLAG_BACKUP_SEMANTICS,
+                         NULL);
 
-    if (hPath == INVALID_HANDLE_VALUE) {
-        return NULL;
+    if (handle == INVALID_HANDLE_VALUE) {
+        return FALSE;
     }
 
     /* retrieve reparse data */
-    if (!DeviceIoControl(hPath,
+    if (!DeviceIoControl(handle,
                          FSCTL_GET_REPARSE_POINT,
                          NULL,
                          0,
                          data,
-                         sizeof(data),
+                         MAXIMUM_REPARSE_DATA_BUFFER_SIZE,
                          NULL,
                          NULL))
     {
-        CloseHandle(hPath);
-        return NULL;
+        CloseHandle(handle);
+        return FALSE;
     }
 
-    CloseHandle(hPath);
+    CloseHandle(handle);
 
     pData = (REPARSE_DATA_BUFFER *)data;
-    pwStr = NULL;
+    ltarget->tag = pData->ReparseTag;
     len = 0;
-
-    if (pReparseTag) {
-        *pReparseTag = pData->ReparseTag;
-    }
+    wstr = NULL;
 
     /* read the link target for each type of symbolic link */
     switch (pData->ReparseTag) {
         /* symbolic links */
         case IO_REPARSE_TAG_SYMLINK:
-            pwStr = pData->SymbolicLinkReparseBuffer.PathBuffer +
-                (pData->SymbolicLinkReparseBuffer.SubstituteNameOffset / sizeof(wchar_t));
             len = pData->SymbolicLinkReparseBuffer.SubstituteNameLength / sizeof(wchar_t);
+            wstr = pData->SymbolicLinkReparseBuffer.PathBuffer +
+                (pData->SymbolicLinkReparseBuffer.SubstituteNameOffset / sizeof(wchar_t));
             break;
 
         /* junctions */
         case IO_REPARSE_TAG_MOUNT_POINT:
-            pwStr = pData->MountPointReparseBuffer.PathBuffer +
-                (pData->MountPointReparseBuffer.SubstituteNameOffset / sizeof(wchar_t));
             len = pData->MountPointReparseBuffer.SubstituteNameLength / sizeof(wchar_t);
+            wstr = pData->MountPointReparseBuffer.PathBuffer +
+                (pData->MountPointReparseBuffer.SubstituteNameOffset / sizeof(wchar_t));
             break;
 
         /* Windows execution aliases */
         case IO_REPARSE_TAG_APPEXECLINK:
-            pwStr = pData->AppExecLinkReparseBuffer.StringList;
+            wstr = pData->AppExecLinkReparseBuffer.StringList;
 
             /* NUL separated stringlist. We want the third entry. */
             for (i = 0; i < 2; i++) {
-                if ((len = wcslen(pwStr)) == 0) return NULL;
-                pwStr += len + 1;
+                if ((len = wcslen(wstr)) == 0) return FALSE;
+                wstr += len + 1;
             }
 
-            if ((len = wcslen(pwStr)) == 0) return NULL;
-
-            /* string is already NUL terminated */
-#ifdef _UNICODE
-            return _wcsdup(pwStr);
-#else
-            return convert_wcs_to_str(pwStr);
-#endif
+            if ((len = wcslen(wstr)) == 0) return FALSE;
+            ltarget->wide_string = _wcsdup(wstr);
+            return TRUE;
 
         /* Linux links */
         case IO_REPARSE_TAG_LX_SYMLINK:
-            pszStr = pData->LxSymbolicLinkReparseBuffer.PathBuffer;
             len = pData->ReparseDataLength - sizeof(pData->LxSymbolicLinkReparseBuffer.Unused);
-
-            /* copy string and append NUL byte */
-            buf = malloc(len + 1);
-            if (!buf) return NULL;
-            CopyMemory(buf, pszStr, len);
-            buf[len] = '\0';
-
-#ifdef _UNICODE
-            pwBuf = convert_utf8_to_wcs(buf);
-            free(buf);
-            return pwBuf;
-#else
-            return buf;
-#endif
+            ltarget->utf8_string = malloc(len + 1);
+            memcpy_s(ltarget->utf8_string, len + 1, pData->LxSymbolicLinkReparseBuffer.PathBuffer, len);
+            ltarget->utf8_string[len] = 0;
+            return TRUE;
 
         default:
-            return NULL;
+            return FALSE;
     }
 
-    if (!pwStr || len == 0) {
+    ltarget->wide_string = malloc((len + 1) * sizeof(wchar_t));
+    wmemcpy_s(ltarget->wide_string, len + 1, wstr, len);
+    ltarget->wide_string[len] = 0;
+
+    return TRUE;
+}
+
+char *getLinkTargetA(const char *path, ULONG *tag)
+{
+    LINK_TARGET ltarget = { 0, NULL, NULL };
+    char *str;
+    wchar_t *wstr;
+
+    if (!path) return NULL;
+    wstr = convert_str_to_wcs(path);
+
+    if (!get_link_target(wstr, &ltarget)) {
+        free(wstr);
+        return NULL;
+    }
+    free(wstr);
+
+    if (tag) *tag = ltarget.tag;
+
+    if (ltarget.tag == IO_REPARSE_TAG_LX_SYMLINK) {
+        return ltarget.utf8_string;
+    }
+
+    /* convert wide char string and free() string */
+    if (!ltarget.wide_string) return NULL;
+    str = convert_wcs_to_str(ltarget.wide_string);
+    free(ltarget.wide_string);
+
+    return str;
+}
+
+wchar_t *getLinkTargetW(const wchar_t *path, ULONG *tag)
+{
+    LINK_TARGET ltarget = { 0, NULL, NULL };
+    wchar_t *wstr;
+
+    if (!path || !get_link_target(path, &ltarget)) {
         return NULL;
     }
 
-    /* copy string and append NUL character */
-    pwBuf = malloc((len + 1) * sizeof(wchar_t));
-    if (!pwBuf) return NULL;
-    CopyMemory(pwBuf, pwStr, len * sizeof(wchar_t));
-    pwBuf[len] = L'\0';
+    if (tag) *tag = ltarget.tag;
 
-#ifdef _UNICODE
-    return pwBuf;
-#else
-    buf = convert_wcs_to_str(pwBuf);
-    free(pwBuf);
-    return buf;
-#endif
+    if (ltarget.tag == IO_REPARSE_TAG_LX_SYMLINK) {
+        /* convert string an free() wide char string */
+        if (!ltarget.utf8_string) return NULL;
+        wstr = convert_utf8_to_wcs(ltarget.utf8_string);
+        free(ltarget.utf8_string);
+        return wstr;
+    }
+
+    return ltarget.wide_string;
 }

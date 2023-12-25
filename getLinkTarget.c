@@ -91,12 +91,20 @@ static BOOL get_link_target(const wchar_t *path, LINK_TARGET *ltarget)
     wchar_t *wstr;
     size_t len, i;
 
-    if (!isSymlinkW(path)) {
-        if (GetLastError() == ERROR_SUCCESS) {
-            /* path exists but is not a symbolic link */
+    switch (isSymlinkW(path))
+    {
+        /* it's a symlink */
+        case TRUE:
+            break;
+
+        /* path exists but is not a symbolic link */
+        case FALSE:
             SetLastError(ERROR_NOT_SUPPORTED);
-        }
-        return FALSE;
+            return FALSE;
+
+        /* error */
+        default:
+            return FALSE;
     }
 
     /* open path for reading */

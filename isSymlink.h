@@ -34,9 +34,9 @@
 
 /**
  * Return values of isSymlink():
- *  1  lpFileName is a symbolic link
- *  0  lpFileName exists and is NOT a symbolic link
- * -1  an error has occured (i.e. lpFileName does not exist)
+ *  1 (TRUE)    lpFileName is a symbolic link
+ *  0 (FALSE)   lpFileName exists and is NOT a symbolic link
+ * -1           an error has occured (i.e. if lpFileName does not exist)
  */
 int isSymlinkA(const char *lpFileName);
 int isSymlinkW(const wchar_t *lpFileName);

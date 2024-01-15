@@ -26,6 +26,10 @@
 
 #include "isSymlink.h"
 
+#if TRUE != 1 || FALSE != 0
+#error TRUE != 1 || FALSE != 0
+#endif
+
 
 int isSymlinkW(const wchar_t *path)
 {
@@ -35,7 +39,7 @@ int isSymlinkW(const wchar_t *path)
         return -1;
     }
 
-    return (dwAttr & FILE_ATTRIBUTE_REPARSE_POINT) ? 1 : 0;
+    return (dwAttr & FILE_ATTRIBUTE_REPARSE_POINT) ? TRUE : FALSE;
 }
 
 int isSymlinkA(const char *path)

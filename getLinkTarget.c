@@ -231,7 +231,7 @@ wchar_t *getLinkTargetW(const wchar_t *path, ULONG *tag)
     if (tag) *tag = ltarget.tag;
 
     if (ltarget.tag == IO_REPARSE_TAG_LX_SYMLINK) {
-        /* convert string an free() wide char string */
+        /* convert string and free() wide char string */
         if (!ltarget.utf8_string) return NULL;
         wstr = convert_utf8_to_wcs(ltarget.utf8_string);
         free(ltarget.utf8_string);

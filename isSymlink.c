@@ -1,7 +1,7 @@
 /**
  * The MIT License (MIT)
  *
- * Copyright (C) 2023 djcj@gmx.de
+ * Copyright (C) 2023-2024 djcj@gmx.de
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -40,18 +40,14 @@ int isSymlinkW(const wchar_t *path)
 
 int isSymlinkA(const char *path)
 {
-    DWORD dwAttr;
+    int rv;
     wchar_t *wstr;
 
     wstr = convert_str_to_wcs(path);
     if (!wstr) return -1;
 
-    dwAttr = GetFileAttributesW(wstr);
+    rv = isSymlinkW(wstr);
     free(wstr);
 
-    if (dwAttr == INVALID_FILE_ATTRIBUTES) {
-        return -1;
-    }
-
-    return (dwAttr & FILE_ATTRIBUTE_REPARSE_POINT) ? 1 : 0;
+    return rv;
 }

@@ -167,6 +167,7 @@ wchar_t *getCanonicalPathW(const wchar_t *path)
     if (is_absolute_path(link)) {
         buf = canonical_path(link);
     } else {
+        /* buf is still set to NULL */
         SetLastError(ERROR_NOT_SUPPORTED);
     }
 

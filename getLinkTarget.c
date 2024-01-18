@@ -180,6 +180,7 @@ static BOOL get_link_target(const wchar_t *path, LINK_TARGET *ltarget)
             return TRUE;
 
         default:
+            SetLastError(ERROR_NOT_SUPPORTED);
             return FALSE;
     }
 
@@ -230,13 +231,14 @@ wchar_t *getLinkTargetW(const wchar_t *path, ULONG *tag)
 
     if (tag) *tag = ltarget.tag;
 
-    if (ltarget.tag == IO_REPARSE_TAG_LX_SYMLINK) {
-        /* convert string and free() wide char string */
-        if (!ltarget.utf8_string) return NULL;
-        wstr = convert_utf8_to_wcs(ltarget.utf8_string);
-        free(ltarget.utf8_string);
-        return wstr;
+    if (ltarget.tag != IO_REPARSE_TAG_LX_SYMLINK) {
+        return ltarget.wide_string;
     }
 
-    return ltarget.wide_string;
+    /* convert string and free() wide char string */
+    if (!ltarget.utf8_string) return NULL;
+    wstr = convert_utf8_to_wcs(ltarget.utf8_string);
+    free(ltarget.utf8_string);
+
+    return wstr;
 }

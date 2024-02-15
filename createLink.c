@@ -69,12 +69,18 @@ BOOL createLinkW(const wchar_t *link, const wchar_t *target, char mode)
 {
     DWORD flags = SYMBOLIC_LINK_FLAG_ALLOW_UNPRIVILEGED_CREATE;
 
-    if (mode == 'h' || mode == 'H') {
-        /* hard link */
-        return CreateHardLinkW(link, target, NULL);
-    } else if (mode == 'd' || mode == 'D') {
-        /* symbolic link to directory */
-        flags |= SYMBOLIC_LINK_FLAG_DIRECTORY;
+    switch (mode) {
+        case 'h':
+        case 'H':
+            /* hard link */
+            return CreateHardLinkW(link, target, NULL);
+        case 'd':
+        case 'D':
+            /* symbolic link to directory */
+            flags |= SYMBOLIC_LINK_FLAG_DIRECTORY;
+            break;
+        default:
+            break;
     }
 
     /* create symbolic link */

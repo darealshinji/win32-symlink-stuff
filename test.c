@@ -9,6 +9,7 @@
 int main()
 {
     const char *lnk = "link_to_C";
+    const wchar_t *wlnk = L"C:\\Users\\User\\AppData\\Local\\Microsoft\\WindowsApps\\winget.exe";
 
     DeleteFileA(lnk);
     RemoveDirectoryA(lnk);
@@ -35,6 +36,17 @@ int main()
     if (path) {
         puts(path);
         free(path);
+    }
+    puts("");
+
+    wprintf(L"test getLinkTargetW [%s]\n", wlnk);
+    tag = 0;
+    wchar_t *wpath = getLinkTargetW(wlnk, (ULONG *)&tag);
+    TEST(wpath && tag == IO_REPARSE_TAG_APPEXECLINK);
+
+    if (wpath) {
+        wprintf(L"%s\n", wpath);
+        free(wpath);
     }
     puts("");
 

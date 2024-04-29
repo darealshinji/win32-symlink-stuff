@@ -31,65 +31,91 @@
 #include "getLinkTarget.h"
 
 
-/**
- * https://learn.microsoft.com/en-us/windows-hardware/drivers/ddi/ntifs/ns-ntifs-_reparse_data_buffer
- */
-typedef struct _REPARSE_DATA_BUFFER {
+/* https://learn.microsoft.com/en-us/windows-hardware/drivers/ddi/ntifs/ns-ntifs-_reparse_data_buffer */
+typedef struct {
   ULONG  ReparseTag;
   USHORT ReparseDataLength;
   USHORT Reserved;
-  union {
-    /* Symbolic links */
-    struct {
-      USHORT SubstituteNameOffset;
-      USHORT SubstituteNameLength;
-      USHORT PrintNameOffset;
-      USHORT PrintNameLength;
-      ULONG  Flags;
-      WCHAR  PathBuffer[1];
-    } SymbolicLinkReparseBuffer;
+  UINT8  DataBuffer[1];
+} REPARSE_DATA_BUFFER;
 
-    /* Junction points */
-    struct {
-      USHORT SubstituteNameOffset;
-      USHORT SubstituteNameLength;
-      USHORT PrintNameOffset;
-      USHORT PrintNameLength;
-      WCHAR  PathBuffer[1];
-    } MountPointReparseBuffer;
+/* Symbolic links */
+typedef struct {
+  ULONG  ReparseTag;
+  USHORT ReparseDataLength;
+  USHORT Reserved;
+  USHORT SubstituteNameOffset;
+  USHORT SubstituteNameLength;
+  USHORT PrintNameOffset;
+  USHORT PrintNameLength;
+  ULONG  Flags;
+  WCHAR  PathBuffer[1];
+} SYMLINK_REPARSE_BUFFER;
 
-    /* AppExec links (execution aliases) */
-    /* (those you can find inside C:\Users\<Username>\AppData\Local\Microsoft\WindowsApps) */
-    /* https://www.tiraniddo.dev/2019/09/overview-of-windows-execution-aliases.html */
-    /* https://github.com/libuv/libuv/blob/a5c01d4de3695e9d9da34cfd643b5ff0ba582ea7/src/win/winapi.h#L4155 */
-    struct {
-      ULONG Unused;
-      WCHAR StringList[1];
-    } AppExecLinkReparseBuffer;
+/* Junction points */
+typedef struct {
+  ULONG  ReparseTag;
+  USHORT ReparseDataLength;
+  USHORT Reserved;
+  USHORT SubstituteNameOffset;
+  USHORT SubstituteNameLength;
+  USHORT PrintNameOffset;
+  USHORT PrintNameLength;
+  WCHAR  PathBuffer[1];
+} MOUNTPOINT_REPARSE_BUFFER;
 
-    /* Symbolic links from the LinuX SubSystem (UTF-8 formatted, no trailing NUL) */
-    /* https://github.com/JFLarvoire/SysToolsLib/blob/829ecca8d95ade20f5e6241e1226d27e1a2443e7/C/MsvcLibX/include/reparsept.h#L286 */
-    struct {
-      ULONG Unused;
-      char  PathBuffer[1];
-    } LxSymbolicLinkReparseBuffer;
-  } DUMMYUNIONNAME;
-} REPARSE_DATA_BUFFER, *PREPARSE_DATA_BUFFER;
+/* AppExec links (execution aliases) */
+/* (those you can find inside C:\Users\<Username>\AppData\Local\Microsoft\WindowsApps) */
+/* https://www.tiraniddo.dev/2019/09/overview-of-windows-execution-aliases.html */
+/* https://github.com/libuv/libuv/blob/a5c01d4de3695e9d9da34cfd643b5ff0ba582ea7/src/win/winapi.h#L4155 */
+typedef struct {
+  ULONG  ReparseTag;
+  USHORT ReparseDataLength;
+  USHORT Reserved;
+  ULONG  Unused;
+  WCHAR  StringList[1];
+} APPXLINK_REPARSE_BUFFER;
+
+/* Symbolic links from the LinuX SubSystem (UTF-8 formatted, no trailing NUL) */
+/* https://github.com/JFLarvoire/SysToolsLib/blob/829ecca8d95ade20f5e6241e1226d27e1a2443e7/C/MsvcLibX/include/reparsept.h#L286 */
+typedef struct {
+  ULONG  ReparseTag;
+  USHORT ReparseDataLength;
+  USHORT Reserved;
+  ULONG  Unused;
+  char   PathBuffer[1];
+} LXSS_SYMLINK_REPARSE_BUFFER;
 
 typedef struct {
-  ULONG tag;
+  ULONG    tag;
   wchar_t *wide_string;
-  char *utf8_string;
+  char    *utf8_string;
 } LINK_TARGET;
 
 
 static BOOL get_link_target(const wchar_t *path, LINK_TARGET *ltarget)
 {
     UINT8 data[MAXIMUM_REPARSE_DATA_BUFFER_SIZE];
+    UINT8 *pDataEnd;
     REPARSE_DATA_BUFFER *pData;
+    SYMLINK_REPARSE_BUFFER *pSym;
+    MOUNTPOINT_REPARSE_BUFFER *pMount;
+    APPXLINK_REPARSE_BUFFER *pAppX;
+    LXSS_SYMLINK_REPARSE_BUFFER *pLxSym;
     HANDLE handle;
     wchar_t *wstr;
-    size_t len, i;
+    size_t off, len, i, buflen, maxlen;
+
+/*
+    const size_t maxlen = MAXIMUM_REPARSE_DATA_BUFFER_SIZE -
+                          (sizeof(pData->ReparseTag) +
+                           sizeof(pData->ReparseDataLength) +
+                           sizeof(pData->Reserved));
+*/
+
+    pData = (REPARSE_DATA_BUFFER *)data;
+    pDataEnd = data + (MAXIMUM_REPARSE_DATA_BUFFER_SIZE - 1);
+    maxlen = pDataEnd - pData->DataBuffer;
 
     switch (isSymlinkW(path))
     {
@@ -136,7 +162,11 @@ static BOOL get_link_target(const wchar_t *path, LINK_TARGET *ltarget)
 
     CloseHandle(handle);
 
-    pData = (REPARSE_DATA_BUFFER *)data;
+    /* check if length exceeds buffer size */
+    if (pData->ReparseDataLength >= maxlen) {
+        return FALSE;
+    }
+
     ltarget->tag = pData->ReparseTag;
     len = 0;
     wstr = NULL;
@@ -145,37 +175,60 @@ static BOOL get_link_target(const wchar_t *path, LINK_TARGET *ltarget)
     switch (pData->ReparseTag) {
         /* symbolic links */
         case IO_REPARSE_TAG_SYMLINK:
-            len = pData->SymbolicLinkReparseBuffer.SubstituteNameLength / sizeof(wchar_t);
-            wstr = pData->SymbolicLinkReparseBuffer.PathBuffer +
-                (pData->SymbolicLinkReparseBuffer.SubstituteNameOffset / sizeof(wchar_t));
+            pSym = (SYMLINK_REPARSE_BUFFER *)data;
+            buflen = (pDataEnd - (UINT8 *)pSym->PathBuffer) / sizeof(wchar_t);
+            off = pSym->SubstituteNameOffset / sizeof(wchar_t);
+            len = pSym->SubstituteNameLength / sizeof(wchar_t);
+
+            if (off >= buflen || len >= buflen) {
+                return FALSE;
+            }
+
+            wstr = pSym->PathBuffer + off;
             break;
 
         /* junctions */
         case IO_REPARSE_TAG_MOUNT_POINT:
-            len = pData->MountPointReparseBuffer.SubstituteNameLength / sizeof(wchar_t);
-            wstr = pData->MountPointReparseBuffer.PathBuffer +
-                (pData->MountPointReparseBuffer.SubstituteNameOffset / sizeof(wchar_t));
+            pMount = (MOUNTPOINT_REPARSE_BUFFER *)data;
+            buflen = (pDataEnd - (UINT8 *)pMount->PathBuffer) / sizeof(wchar_t);
+            off = pMount->SubstituteNameOffset / sizeof(wchar_t);
+            len = pMount->SubstituteNameLength / sizeof(wchar_t);
+
+            if (off >= buflen || len >= buflen) {
+                return FALSE;
+            }
+
+            wstr = pMount->PathBuffer + off;
             break;
 
         /* Windows execution aliases */
         case IO_REPARSE_TAG_APPEXECLINK:
-            wstr = pData->AppExecLinkReparseBuffer.StringList;
+            pAppX = (APPXLINK_REPARSE_BUFFER *)data;
+            wstr = pAppX->StringList;
+            buflen = (pDataEnd - (UINT8 *)wstr) / sizeof(wchar_t);
 
             /* NUL separated stringlist. We want the third entry. */
-            for (i = 0; i < 2; i++) {
-                if ((len = wcslen(wstr)) == 0) return FALSE;
+            for (i = 1; i < 3; i++) {
+                if ((len = wcsnlen_s(wstr, buflen)) == 0) {
+                    return FALSE;
+                }
                 wstr += len + 1;
+                buflen -= len + 1;
             }
 
-            if ((len = wcslen(wstr)) == 0) return FALSE;
+            if ((len = wcsnlen_s(wstr, buflen)) == 0) {
+                return FALSE;
+            }
+
             ltarget->wide_string = _wcsdup(wstr);
             return TRUE;
 
         /* Linux links */
         case IO_REPARSE_TAG_LX_SYMLINK:
-            len = pData->ReparseDataLength - sizeof(pData->LxSymbolicLinkReparseBuffer.Unused);
+            pLxSym = (LXSS_SYMLINK_REPARSE_BUFFER *)data;
+            len = pLxSym->ReparseDataLength - sizeof(pLxSym->Unused);
             ltarget->utf8_string = malloc(len + 1);
-            memcpy_s(ltarget->utf8_string, len + 1, pData->LxSymbolicLinkReparseBuffer.PathBuffer, len);
+            memcpy_s(ltarget->utf8_string, len + 1, pLxSym->PathBuffer, len);
             ltarget->utf8_string[len] = 0;
             return TRUE;
 

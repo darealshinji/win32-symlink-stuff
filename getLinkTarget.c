@@ -115,7 +115,7 @@ static BOOL get_link_target(const wchar_t *path, LINK_TARGET *ltarget)
 
     pData = (REPARSE_DATA_BUFFER *)data;
     pDataEnd = data + (MAXIMUM_REPARSE_DATA_BUFFER_SIZE - 1);
-    maxlen = pDataEnd - pData->DataBuffer;
+    maxlen = (pDataEnd - pData->DataBuffer) + 1;
 
     switch (isSymlinkW(path))
     {

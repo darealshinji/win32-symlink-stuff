@@ -1,7 +1,7 @@
 /**
  * The MIT License (MIT)
  *
- * Copyright (C) 2023 djcj@gmx.de
+ * Copyright (C) 2023-2025 Carsten Janssen
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -23,9 +23,10 @@
  */
 #include <windows.h>
 #include <wchar.h>
-
-#include "createLink.h"
+#include <stdlib.h>
 #include "convert.h"
+#include "w32-symlink.h"
+
 
 /* https://learn.microsoft.com/en-us/windows/win32/api/winbase/nf-winbase-createsymboliclinkw */
 #ifndef SYMBOLIC_LINK_FLAG_DIRECTORY

@@ -1,9 +1,5 @@
-Win32 C helper functions to handle symbolic links.
+Win32 C helper functions to read or create symbolic and hard links,
+including POSIX functions such as `lstat()` and `readlink()`.
 
-createLink: create a symbolic link or hard link
+See `include/w32-symlink.h` for information about its API.
 
-getCanonicalPath: return the canonicalized absolute filepath
-
-getLinkTarget: return the target of a symbolic link
-
-isSymlink: returns whether a path is a symbolic link or not

@@ -1,7 +1,7 @@
 /**
  * The MIT License (MIT)
  *
- * Copyright (C) 2023 djcj@gmx.de
+ * Copyright (C) 2023-2025 Carsten Janssen
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -25,10 +25,8 @@
 #include <wchar.h>
 #include <stdlib.h>
 #include <stdio.h>
-
 #include "convert.h"
-#include "getCanonicalPath.h"
-#include "getLinkTarget.h"
+#include "w32-symlink.h"
 
 #ifndef GetFinalPathNameByHandle
 extern DWORD GetFinalPathNameByHandleW(HANDLE hFile, LPWSTR lpszFilePath, DWORD cchFilePath, DWORD dwFlags);

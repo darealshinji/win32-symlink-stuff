@@ -1,7 +1,7 @@
 /**
  * The MIT License (MIT)
  *
- * Copyright (C) 2023 djcj@gmx.de
+ * Copyright (C) 2023-2025 Carsten Janssen
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -21,29 +21,33 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE
  */
-#ifndef _GETCANONICALPATH_H_
-#define _GETCANONICALPATH_H_
-
 #include <windows.h>
+#include <wchar.h>
+#include "convert.h"
+#include "w32-symlink.h"
 
-#ifdef _UNICODE
-#define getCanonicalPath getCanonicalPathW
-#else
-#define getCanonicalPath getCanonicalPathA
-#endif
 
-/**
- * getCanonicalPath() returns the canonicalized absolute path form
- * of lpFileName, with all symbolic links and '.' and '..' elements resolved.
- * This function is similar to POSIX's `realpath(3)` or GNU's
- * `canonicalize_file_name(3)`.
- *
- * Consecutive path separators are replaced with a single '\'.
- * The resulting path will begin with "\\?\" followed by the drive letter.
- * 
- * The result must be deallocated with free().
- */
-char    *getCanonicalPathA(const char *lpFileName);
-wchar_t *getCanonicalPathW(const wchar_t *lpFileName);
+int isSymlinkW(const wchar_t *path)
+{
+    DWORD dwAttr = GetFileAttributesW(path);
 
-#endif /* _GETCANONICALPATH_H_ */
+    if (dwAttr == INVALID_FILE_ATTRIBUTES) {
+        return -1;
+    }
+
+    return (dwAttr & FILE_ATTRIBUTE_REPARSE_POINT) ? TRUE : FALSE;
+}
+
+int isSymlinkA(const char *path)
+{
+    int rv;
+    wchar_t *wstr;
+
+    wstr = convert_str_to_wcs(path);
+    if (!wstr) return -1;
+
+    rv = isSymlinkW(wstr);
+    free(wstr);
+
+    return rv;
+}

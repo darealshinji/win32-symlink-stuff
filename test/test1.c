@@ -1,10 +1,12 @@
-#include "convert.c"
-#include "createLink.c"
-#include "getLinkTarget.c"
-#include "isSymlink.c"
-#include "getCanonicalPath.c"
+#include <windows.h>
+#include <wchar.h>
+#include <stdio.h>
+#include <stdlib.h>
+
+#include "w32-symlink.h"
 
 #define TEST(x)  puts((x) ? "success" : "failure")
+
 
 int main()
 {

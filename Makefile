@@ -1,4 +1,4 @@
-CFLAGS = -Wall -O2 -Iinclude
+CFLAGS = -Wall -Wextra -O3 -Iinclude
 LDFLAGS = -s
 
 OBJS = source/convert.o \
@@ -6,6 +6,7 @@ OBJS = source/convert.o \
 	source/getCanonicalPath.o \
 	source/getLinkTarget.o \
 	source/isSymlink.o \
+	source/lstat.o \
 	source/posix.o
 
 ARCHIVE = symlink.a

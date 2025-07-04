@@ -15,7 +15,7 @@
 
 int main()
 {
-    struct stat st;
+    struct _stat st;
     int rv;
 	char buf[MAX_PATH] = {0};
 	wchar_t wbuf[MAX_PATH] = {0};
@@ -66,8 +66,8 @@ int main()
     }
     puts("");
 
-    puts("test lstat()");
-    TEST((rv = lstat(lnk, &st)) == 0);
+    puts("test _lstat()");
+    TEST((rv = _lstat(lnk, &st)) == 0);
 
     if (rv == 0) {
         printf("st_size = %ju\n", (uintmax_t)st.st_size);
@@ -78,8 +78,8 @@ int main()
     }
     puts("");
 
-    puts("test stat()");
-    TEST((rv = stat(lnk, &st)) == 0);
+    puts("test _stat()");
+    TEST((rv = _stat(lnk, &st)) == 0);
 
     if (rv == 0) {
         printf("st_size = %ju\n", (uintmax_t)st.st_size);

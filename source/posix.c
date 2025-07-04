@@ -36,7 +36,7 @@
 
 /* try to map some Windows error codes that might appear
  * to an errno value (mostly file operation error codes) */
-static int winerr_to_errno(DWORD dwErr)
+static int map_winerr_to_errno(DWORD dwErr)
 {
     switch (dwErr)
     {
@@ -112,7 +112,7 @@ int symlink(const char *target, const char *linkpath)
     }
 
     if (createLinkA(linkpath, target, mode) == FALSE) {
-        errno = winerr_to_errno(GetLastError());
+        errno = map_winerr_to_errno(GetLastError());
         return -1;
     }
 
@@ -138,7 +138,7 @@ int _wsymlink(const wchar_t *target, const wchar_t *linkpath)
     }
 
     if (createLinkW(linkpath, target, mode) == FALSE) {
-        errno = winerr_to_errno(GetLastError());
+        errno = map_winerr_to_errno(GetLastError());
         return -1;
     }
 
@@ -154,7 +154,7 @@ int link(const char *oldpath, const char *newpath)
     }
 
     if (createLinkA(oldpath, newpath, 'H') == FALSE) {
-        errno = winerr_to_errno(GetLastError());
+        errno = map_winerr_to_errno(GetLastError());
         return -1;
     }
 
@@ -170,7 +170,7 @@ int _wlink(const wchar_t *oldpath, const wchar_t *newpath)
     }
 
     if (createLinkW(oldpath, newpath, 'H') == FALSE) {
-        errno = winerr_to_errno(GetLastError());
+        errno = map_winerr_to_errno(GetLastError());
         return -1;
     }
 
@@ -229,7 +229,7 @@ char *readlink_s(const char *path, char *buf, size_t bufsize)
     ptr = getLinkTargetA(path, NULL);
 
     if (!ptr) {
-        errno = winerr_to_errno(GetLastError());
+        errno = map_winerr_to_errno(GetLastError());
         return NULL;
     }
 
@@ -271,7 +271,7 @@ wchar_t *_wreadlink_s(const wchar_t *path, wchar_t *buf, size_t numwcs)
     ptr = getLinkTargetW(path, NULL);
 
     if (!ptr) {
-        errno = winerr_to_errno(GetLastError());
+        errno = map_winerr_to_errno(GetLastError());
         return NULL;
     }
 
@@ -313,7 +313,7 @@ char *realpath_s(const char *path, char *buf, size_t bufsize)
     ptr = getCanonicalPathA(path);
 
     if (!ptr) {
-        errno = winerr_to_errno(GetLastError());
+        errno = map_winerr_to_errno(GetLastError());
         return NULL;
     }
 
@@ -355,7 +355,7 @@ wchar_t *_wrealpath_s(const wchar_t *path, wchar_t *buf, size_t numwcs)
     ptr = getCanonicalPathW(path);
 
     if (!ptr) {
-        errno = winerr_to_errno(GetLastError());
+        errno = map_winerr_to_errno(GetLastError());
         return NULL;
     }
 
@@ -384,7 +384,7 @@ wchar_t *_wrealpath_s(const wchar_t *path, wchar_t *buf, size_t numwcs)
 }
 
 
-int _lstat(const char *pathname, struct _stat *statbuf)
+int _lstat64(const char *pathname, struct _stat64 *statbuf)
 {
     wchar_t *wcs_path;
     int rv;
@@ -395,14 +395,14 @@ int _lstat(const char *pathname, struct _stat *statbuf)
     }
 
     wcs_path = convert_str_to_wcs(pathname);
-    rv = _wlstat(wcs_path, statbuf);
+    rv = _lwstat64(wcs_path, statbuf);
     free(wcs_path);
 
     return rv;
 }
 
 
-int _wlstat(const wchar_t *pathname, struct _stat *statbuf)
+int _lwstat64(const wchar_t *pathname, struct _stat64 *statbuf)
 {
     int fd, errsav, rv;
     HANDLE handle;
@@ -414,7 +414,7 @@ int _wlstat(const wchar_t *pathname, struct _stat *statbuf)
 
     if (!isSymlinkW(pathname)) {
         /* no symlink, use regular _wstat() function */
-        return _wstat(pathname, statbuf);
+        return _wstat64(pathname, statbuf);
     }
 
     /* get symbolic link file handle */
@@ -427,7 +427,7 @@ int _wlstat(const wchar_t *pathname, struct _stat *statbuf)
                          NULL);
 
     if (handle == INVALID_HANDLE_VALUE) {
-        errno = winerr_to_errno(GetLastError());
+        errno = map_winerr_to_errno(GetLastError());
         return -1;
     }
 
@@ -441,7 +441,7 @@ int _wlstat(const wchar_t *pathname, struct _stat *statbuf)
     }
 
     /* get status information */
-    rv = _fstat(fd, statbuf);
+    rv = _fstat64(fd, statbuf);
 
     /* don't call CloseHandle()! */
     errsav = errno;

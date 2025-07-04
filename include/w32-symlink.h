@@ -27,16 +27,19 @@
 #include <windows.h>
 #include <wchar.h>
 #include <limits.h>
+#include <sys/types.h>
+#include <sys/stat.h>
 
-#ifdef __cplusplus
-extern "C" {
+
+/* typedef for ssize_t */
+#if !defined(__MINGW32__) && !defined(_SSIZE_T_DEFINED)
+typedef __int64 ssize_t;
+#define _SSIZE_T_DEFINED
 #endif
 
 
-/* ssize_t typedef */
-#if !defined(_SSIZE_T_DEFINED) && !defined(HAVE_TYPE_SSIZE_T)
-typedef __int64 ssize_t;
-#define _SSIZE_T_DEFINED
+#ifdef __cplusplus
+extern "C" {
 #endif
 
 
@@ -282,22 +285,57 @@ inline wchar_t *_wrealpath(const wchar_t *path, wchar_t *resolved_path) {
 
 
 /**
- * _tlstat is identical to _tstat, except that if pathname is a symbolic link
- * it will provide information about the link itself instead of the target
+ * _lstat is identical to _stat, except that if path is a symbolic link it
+ * will provide information about the link itself instead of the target
  * that the link points to.
  */
 
 #ifdef _UNICODE
-#define _tlstat _wlstat
+#define _ltstat      _lwstat
+#define _ltstat32    _lwstat32
+#define _ltstat64    _lwstat64
+#define _ltstati64   _lwstati64
+#define _ltstat32i64 _lwstat32i64
+#define _ltstat64i32 _lwstat64i32
+#define  ltstat       lwstat
+#define  ltstat64     lwstat64
 #else
-#define _tlstat _lstat
+#define _ltstat      _lstat
+#define _ltstat32    _lstat32
+#define _ltstat64    _lstat64
+#define _ltstati64   _lstati64
+#define _ltstat32i64 _lstat32i64
+#define _ltstat64i32 _lstat64i32
+#define  ltstat       lstat
+#define  ltstat64     lstat64
 #endif
 
-int  _lstat(const char *pathname, struct _stat *statbuf);
-int _wlstat(const wchar_t *pathname, struct _stat *statbuf);
+#ifndef stat64
+#define stat64 _stat64
+#endif
 
-inline int lstat(const char *pathname, struct stat *statbuf) {
-    return _lstat(pathname, (struct _stat *)statbuf);
+int _lstat(const char *path, struct _stat *buffer);
+int _lstat32(const char *path, struct _stat32 *buffer);
+int _lstat64(const char *path, struct _stat64 *buffer);
+int _lstati64(const char *path, struct _stati64 *buffer);
+int _lstat32i64(const char *path, struct _stat32i64 *buffer);
+int _lstat64i32(const char *path, struct _stat64i32 *buffer);
+
+int _lwstat(const wchar_t *path, struct _stat *buffer);
+int _lwstat32(const wchar_t *path, struct _stat32 *buffer);
+int _lwstat64(const wchar_t *path, struct _stat64 *buffer);
+int _lwstati64(const wchar_t *path, struct _stati64 *buffer);
+int _lwstat32i64(const wchar_t *path, struct _stat32i64 *buffer);
+int _lwstat64i32(const wchar_t *path, struct _stat64i32 *buffer);
+
+int lstat(const char *path, struct stat *buffer);
+int lwstat(const wchar_t *path, struct stat *buffer);
+
+inline int lstat64(const char *path, struct stat64 *buffer) {
+   return _lstat64(path, buffer);
+}
+inline int lwstat64(const wchar_t *path, struct stat64 *buffer) {
+   return _lwstat64(path, buffer);
 }
 
 

@@ -23,6 +23,7 @@
  */
 #include <windows.h>
 #include <wchar.h>
+#include <ctype.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include "convert.h"
@@ -91,19 +92,19 @@ static wchar_t *canonical_path(const wchar_t *path)
 static BOOL is_absolute_path(const wchar_t *p)
 {
     /* skip leading namespace specifier */
-    if (wcslen(p) > 3 && p[0] == L'\\' &&
-        (wcsncmp(p, L"\\" "\\" "?" "\\", 4) == 0 || /* "\\?\" file namespace */
-         wcsncmp(p, L"\\" "\\" "." "\\", 4) == 0 || /* "\\.\" device namespace */
-         wcsncmp(p, L"\\" "?"  "?" "\\", 4) == 0))  /* "\??\" NT namespace? */
+    if (wcsnlen_s(p, 4) == 4 &&
+        p[0] == L'\\' &&
+        p[3] == L'\\' &&
+        (wcsncmp(p+1, L"\\" "?", 2) == 0 || /* "\\?\" file namespace */
+         wcsncmp(p+1, L"\\" ".", 2) == 0 || /* "\\.\" device namespace */
+         wcsncmp(p+1, L"?"  "?", 2) == 0))  /* "\??\" NT namespace? */
     {
         p += 4;
     }
 
     /* drive letter + colon + separator, i.e. "C:\" or "z:/" */
-    if (wcslen(p) > 2 && p[1] == L':' &&
-        (p[2] == L'\\' || p[2] == L'/') &&
-        ((p[0] >= L'A' && p[0] <= L'Z') ||
-         (p[0] >= L'a' && p[0] <= L'z')))
+    if (wcsnlen_s(p, 3) == 3 && p[1] == L':' &&
+        (p[2] == L'\\' || p[2] == L'/') && iswalpha(p[0]))
     {
         return TRUE;
     }
@@ -149,10 +150,7 @@ wchar_t *getCanonicalPathW(const wchar_t *path)
     if (!link) return NULL;
 
     /* We cannot reliably resolve LXSS symlinks to their Windows counterparts
-     * using GetFinalPathNameByHandle.
-     * For example a link target "C:/Windows" could be a relative path inside a
-     * Wine prefix whereas "/mnt/c/Windows" may actually be the real location
-     * of "C:\Windows". */
+     * using GetFinalPathNameByHandle. */
     if (tag == IO_REPARSE_TAG_LX_SYMLINK) {
         SetLastError(ERROR_NOT_SUPPORTED);
         return NULL;

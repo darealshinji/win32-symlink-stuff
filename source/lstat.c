@@ -30,7 +30,7 @@
 
 /* the stat() API on Windows is a mess ... */
 
-#define COPY_TO_BUFFER \
+#define COPY_TO_BUFFER(TIME, SIZE) \
   buffer->st_dev = st.st_dev; \
   buffer->st_ino = st.st_ino; \
   buffer->st_mode = st.st_mode; \
@@ -38,34 +38,34 @@
   buffer->st_uid = st.st_uid; \
   buffer->st_gid = st.st_gid; \
   buffer->st_rdev = st.st_rdev; \
-  buffer->st_size = st.st_size; \
-  buffer->st_atime = st.st_atime; \
-  buffer->st_mtime = st.st_mtime; \
-  buffer->st_ctime = st.st_ctime;
+  buffer->st_size = (SIZE) st.st_size; \
+  buffer->st_atime = (TIME) st.st_atime; \
+  buffer->st_mtime = (TIME) st.st_mtime; \
+  buffer->st_ctime = (TIME) st.st_ctime;
 
-#define IMPLEMENT_LSTAT(LSTAT, LWSTAT, TYPE) \
+#define IMPLEMENT_LSTAT(LSTAT, LWSTAT, TYPE, TIME, SIZE) \
 \
-  int LSTAT(const char *path, TYPE *buffer) \
+  int LSTAT(const char *path, struct TYPE *buffer) \
   { \
     struct _stat64 st; \
     int rv = _lstat64(path, &st); \
-    if (rv == 0) { COPY_TO_BUFFER; } \
+    if (rv == 0) { COPY_TO_BUFFER(TIME, SIZE); } \
     return rv; \
   } \
 \
-  int LWSTAT(const wchar_t *path, TYPE *buffer) \
+  int LWSTAT(const wchar_t *path, struct TYPE *buffer) \
   { \
     struct _stat64 st; \
     int rv = _lwstat64(path, &st); \
-    if (rv == 0) { COPY_TO_BUFFER; } \
+    if (rv == 0) { COPY_TO_BUFFER(TIME, SIZE); } \
     return rv; \
   }
 
 
-IMPLEMENT_LSTAT(lstat, lwstat, struct stat)
-IMPLEMENT_LSTAT(_lstat, _lwstat, struct _stat)
-IMPLEMENT_LSTAT(_lstat32, _lwstat32, struct _stat32)
-IMPLEMENT_LSTAT(_lstati64, _lwstati64, struct _stati64)
-IMPLEMENT_LSTAT(_lstat32i64, _lwstat32i64, struct _stat32i64)
-IMPLEMENT_LSTAT(_lstat64i32, _lwstat64i32, struct _stat64i32)
+IMPLEMENT_LSTAT (lstat,       lwstat,       stat,       time_t,     _off_t)
+IMPLEMENT_LSTAT (_lstat,      _lwstat,      _stat,      time_t,     _off_t)
+IMPLEMENT_LSTAT (_lstat32,    _lwstat32,    _stat32,    __time32_t, _off_t)
+IMPLEMENT_LSTAT (_lstati64,   _lwstati64,   _stati64,   time_t,     __int64)
+IMPLEMENT_LSTAT (_lstat32i64, _lwstat32i64, _stat32i64, __time32_t, __int64)
+IMPLEMENT_LSTAT (_lstat64i32, _lwstat64i32, _stat64i32, __time64_t, _off_t)
 

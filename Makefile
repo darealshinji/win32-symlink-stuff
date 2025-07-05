@@ -18,7 +18,7 @@ all: $(ARCHIVE)
 tests: $(TEST_FILES)
 
 clean:
-	-rm -f $(ARCHIVE) $(TEST_FILES) $(OBJS) test/test1.o test/test2.o
+	-rm -f *.a test/*.exe test/*.o source/*.o
 
 $(ARCHIVE): $(OBJS)
 	$(AR) crs $@ $(OBJS)

@@ -17,18 +17,16 @@ int main()
 {
     struct _stat st;
     int rv;
-	char buf[MAX_PATH] = {0};
-	wchar_t wbuf[MAX_PATH] = {0};
-	char timebuf[32] = {0};
+    char timebuf[32] = {0};
 
     const char *lnk = "link_to_NtDLL";
-	const char *lnk2 = "link_to_C";
+    const char *lnk2 = "link_to_C";
     const wchar_t *wlnk = L"C:\\Users\\User\\AppData\\Local\\Microsoft\\WindowsApps\\winget.exe";
-	const char *ntdll = "c:/WINDOWS/System32/NtDLL.dll";
-	const char *c_dir = "c:/";
+    const char *ntdll = "c:/WINDOWS/System32/NtDLL.dll";
+    const char *c_dir = "c:/";
 
     DeleteFileA(lnk);
-	DeleteFileA(lnk2);
+    DeleteFileA(lnk2);
     RemoveDirectoryA(lnk);
     RemoveDirectoryA(lnk2);
 
@@ -40,8 +38,8 @@ int main()
     TEST(symlink(ntdll, lnk) == 0);
     puts("");
 
-    puts("test realpath()");
-    char *path = realpath("./././link_to_NtDLL", NULL);
+    puts("test realpath_s()");
+    char *path = realpath_s("./././link_to_NtDLL", NULL, 0);
     TEST(path);
 
     if (path) {
@@ -50,19 +48,21 @@ int main()
     }
     puts("");
 
-    puts("test readlink()");
-    TEST(readlink(lnk, buf, _countof(buf)) != -1);
+    puts("test readlink_s()");
+    path = readlink_s(lnk, NULL, 0);
 
-    if (buf[0]) {
-        puts(buf);
+    if (path) {
+        puts(path);
+        free(path);
     }
     puts("");
 
-	wprintf(L"test _wreadlink [%s]\n", wlnk);
-    TEST(_wreadlink(wlnk, wbuf, _countof(wbuf)) != -1);
+    wprintf(L"test _wreadlink_s [%s]\n", wlnk);
+    wchar_t *wpath = _wreadlink_s(wlnk, NULL, 0);
 
-    if (wbuf[0]) {
-        _putws(wbuf);
+    if (wpath) {
+        _putws(wpath);
+        free(wpath);
     }
     puts("");
 
@@ -72,9 +72,9 @@ int main()
     if (rv == 0) {
         printf("st_size = %ju\n", (uintmax_t)st.st_size);
 
-		if (ctime_s(timebuf, _countof(timebuf), &st.st_mtime) == 0) {
-			printf("st_mtime ~= %s\n", timebuf);
-		}
+        if (ctime_s(timebuf, _countof(timebuf), &st.st_mtime) == 0) {
+            printf("st_mtime ~= %s\n", timebuf);
+        }
     }
     puts("");
 
@@ -84,9 +84,9 @@ int main()
     if (rv == 0) {
         printf("st_size = %ju\n", (uintmax_t)st.st_size);
 
-		if (ctime_s(timebuf, _countof(timebuf), &st.st_mtime) == 0) {
-			printf("st_mtime ~= %s\n", timebuf);
-		}
+        if (ctime_s(timebuf, _countof(timebuf), &st.st_mtime) == 0) {
+            printf("st_mtime ~= %s\n", timebuf);
+        }
     }
 
     return 0;

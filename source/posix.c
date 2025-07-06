@@ -384,6 +384,48 @@ wchar_t *_wrealpath_s(const wchar_t *path, wchar_t *buf, size_t numwcs)
 }
 
 
+char *realpath(const char *path, char *resolved_path)
+{
+    char buf[PATH_MAX];
+    char *ptr;
+
+    ptr = realpath_s(path, buf, PATH_MAX);
+
+    if (!ptr) {
+        /* error (including truncation from exceeding PATH_MAX) */
+        return NULL;
+    }
+
+    if (!resolved_path) {
+        /* return allocated copy */
+        return _strdup(buf);
+    }
+
+    return memcpy(resolved_path, buf, strlen(buf)+1);
+}
+
+
+wchar_t *_wrealpath(const wchar_t *path, wchar_t *resolved_path)
+{
+    wchar_t buf[PATH_MAX];
+    wchar_t *ptr;
+
+    ptr = _wrealpath_s(path, buf, PATH_MAX);
+
+    if (!ptr) {
+        /* error (including truncation from exceeding PATH_MAX) */
+        return NULL;
+    }
+
+    if (!resolved_path) {
+        /* return allocated copy */
+        return _wcsdup(buf);
+    }
+
+    return wmemcpy(resolved_path, buf, wcslen(buf)+1);
+}
+
+
 int _lstat64(const char *pathname, struct _stat64 *statbuf)
 {
     wchar_t *wcs_path;

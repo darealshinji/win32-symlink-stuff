@@ -31,6 +31,20 @@
 #include <sys/stat.h>
 
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+
+#ifdef __GNUC__
+#define __DEPRECATED  __attribute__((deprecated))
+#elif defined(_MSC_VER)
+#define __DEPRECATED  __declspec(deprecated)
+#else
+#define __DEPRECATED  /**/
+#endif
+
+
 /* typedef for ssize_t */
 #if !defined(__MINGW32__) && !defined(_SSIZE_T_DEFINED)
 typedef __int64 ssize_t;
@@ -38,8 +52,13 @@ typedef __int64 ssize_t;
 #endif
 
 
-#ifdef __cplusplus
-extern "C" {
+/* https://learn.microsoft.com/en-us/windows/win32/fileio/maximum-file-path-limitation */
+//#ifdef PATH_MAX
+//#undef PATH_MAX
+//#endif
+#define MODERN_MAX_PATH  32767
+#ifndef PATH_MAX
+#define PATH_MAX  MODERN_MAX_PATH
 #endif
 
 
@@ -146,8 +165,8 @@ int isSymlinkW(const wchar_t *lpFileName);
 
 
 /**
- * The following functions are missing implementations from the POSIX C API.
- * Wide character and "secure" variants are added too.
+ * The following functions are missing implementations from the POSIX C API
+ * (and GNU extensions). Wide character and "secure" variants are added too.
  * The behavior however is not guaranteed to be exactly as in POSIX.
  */
 
@@ -196,6 +215,8 @@ int _wlink(const wchar_t *oldpath, const wchar_t *newpath);
  *
  * On success the string/character length of the link target is returned.
  * On error, -1 is returned, and errno is set to indicate the error.
+ *
+ * This function is deprecated in favor of _treadlink_s.
  */
 
 #ifdef _UNICODE
@@ -204,18 +225,19 @@ int _wlink(const wchar_t *oldpath, const wchar_t *newpath);
 #define _treadlink readlink
 #endif
 
-ssize_t   readlink(const char *path, char *buf, size_t bufsize);
-ssize_t _wreadlink(const wchar_t *path, wchar_t *buf, size_t numwcs);
+__DEPRECATED /* use readlink_s instead! */ ssize_t readlink(
+    const char *path, char *buf, size_t bufsize);
+
+__DEPRECATED /* use _wreadlink_s instead! */ ssize_t _wreadlink(
+    const wchar_t *path, wchar_t *buf, size_t numwcs);
 
 
 
 /**
  * Read the value of the link 'path' and save it into the buffer 'buf'.
+ *
  * If 'buf' is NULL, 'bufsize/numwcs' is ignored and an allocated string
  * will be returned on success. This string must be deallocated with 'free()'.
- *
- * The design of _treadlink_s is similar to that of _trealpath_s in that it
- * returns a pointer to a potentially allocated string.
  *
  * On success a pointer to the buffer is returned.
  * On error, NULL is returned, the contents of 'buf' are undefined and errno
@@ -234,12 +256,39 @@ wchar_t *_wreadlink_s(const wchar_t *path, wchar_t *buf, size_t numwcs);
 
 
 /**
+ * Get the canonicalized absolute pathname of 'path' and save it in the buffer
+ * pointed to by 'resolved_path' up to a maximum of PATH_MAX bytes.
+ * If 'resolved_path' is NULL, an allocated string up to PATH_MAX size will be
+ * returned on success. This string must be deallocated with 'free()'.
+ *
+ * On success a pointer to the 'resolved_path' is returned.
+ * On error, NULL is returned, the contents of 'resolved_path' are undefined and
+ * errno is set to indicate the error.
+ *
+ * This function is deprecated in favor of _trealpath_s.
+ */
+
+#ifdef _UNICODE
+#define _trealpath _wrealpath
+#else
+#define _trealpath realpath
+#endif
+
+__DEPRECATED /* use realpath_s instead! */ char *realpath(
+    const char *path, char *resolved_path);
+
+__DEPRECATED /* use _wrealpath_s instead! */ wchar_t *_wrealpath(
+    const wchar_t *path, wchar_t *resolved_path);
+
+
+
+/**
  * Get the canonicalized absolute pathname of 'path' and save it in the buffer 'buf'.
  * If 'buf' is NULL, 'bufsize/numwcs' is ignored and an allocated string
  * will be returned on success. This string must be deallocated with 'free()'.
  *
  * This function is similar to _trealpath except the buffer size is set
- * explicitly and isn't (potentially) limited to MAX_PATH.
+ * explicitly and may not be limited to PATH_MAX.
  *
  * On success a pointer to the buffer is returned.
  * On error, NULL is returned, the contents of 'buf' are undefined and errno
@@ -258,28 +307,25 @@ wchar_t *_wrealpath_s(const wchar_t *path, wchar_t *buf, size_t numwcs);
 
 
 /**
- * Get the canonicalized absolute pathname of 'path' and save it in the buffer
- * pointed to by 'resolved_path'. The size of this buffer must be at least MAX_PATH.
- * If 'resolved_path' is NULL, an allocated string up to MAX_PATH size will be
- * returned on success. This string must be deallocated with 'free()'.
+ * Get the canonicalized absolute pathname of 'path'. This string must later
+ * be deallocated with 'free()'.
  *
- * On success a pointer to the 'resolved_path' is returned.
- * On error, NULL is returned, the contents of 'resolved_path' are undefined and
- * errno is set to indicate the error.
+ * On success an allocated string is returned.
+ * On error, NULL is returned and errno is set to indicate the error.
  */
 
 #ifdef _UNICODE
-#define _trealpath _wrealpath
+#define _tcanonicalize_file_name _wcanonicalize_file_name
 #else
-#define _trealpath realpath
+#define _tcanonicalize_file_name canonicalize_file_name
 #endif
 
-inline char *realpath(const char *path, char *resolved_path) {
-    return realpath_s(path, resolved_path, MAX_PATH);
+inline char *canonicalize_file_name(const char *path) {
+    return realpath_s(path, NULL, 0);
 }
 
-inline wchar_t *_wrealpath(const wchar_t *path, wchar_t *resolved_path) {
-    return _wrealpath_s(path, resolved_path, MAX_PATH);
+inline wchar_t *_wcanonicalize_file_name(const wchar_t *path) {
+    return _wrealpath_s(path, NULL, 0);
 }
 
 
@@ -310,10 +356,6 @@ inline wchar_t *_wrealpath(const wchar_t *path, wchar_t *resolved_path) {
 #define  ltstat64     lstat64
 #endif
 
-#ifndef stat64
-#define stat64 _stat64
-#endif
-
 int _lstat(const char *path, struct _stat *buffer);
 int _lstat32(const char *path, struct _stat32 *buffer);
 int _lstat64(const char *path, struct _stat64 *buffer);
@@ -331,12 +373,20 @@ int _lwstat64i32(const wchar_t *path, struct _stat64i32 *buffer);
 int lstat(const char *path, struct stat *buffer);
 int lwstat(const wchar_t *path, struct stat *buffer);
 
+
+#ifndef stat64
+#define stat64 _stat64
+#endif
+
 inline int lstat64(const char *path, struct stat64 *buffer) {
    return _lstat64(path, buffer);
 }
 inline int lwstat64(const wchar_t *path, struct stat64 *buffer) {
    return _lwstat64(path, buffer);
 }
+
+
+#undef __DEPRECATED
 
 
 #ifdef __cplusplus

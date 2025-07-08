@@ -93,30 +93,29 @@ static int map_winerr_to_errno(DWORD dwErr)
 
 int symlink(const char *target, const char *linkpath)
 {
-    char mode = 0;
-    DWORD dwAttr;
-    wchar_t *wcs_target;
+    int rv;
+    wchar_t *wcs_linkpath, *wcs_target;
 
     if (!target || !*target || !linkpath || !*linkpath) {
         errno = EINVAL; /* Invalid argument */
         return -1;
     }
 
-    wcs_target = convert_str_to_wcs(target);
-    dwAttr = GetFileAttributesW(wcs_target);
-    free(wcs_target);
-
-    /* set mode if target exists and is a directory */
-    if (dwAttr != INVALID_FILE_ATTRIBUTES && (dwAttr & FILE_ATTRIBUTE_DIRECTORY)) {
-        mode = 'D';
-    }
-
-    if (createLinkA(linkpath, target, mode) == FALSE) {
-        errno = map_winerr_to_errno(GetLastError());
+    if ((wcs_target = convert_str_to_wcs(target)) == NULL) {
         return -1;
     }
 
-    return 0;
+    if ((wcs_linkpath = convert_str_to_wcs(linkpath)) == NULL) {
+        free(wcs_target);
+        return -1;
+    }
+
+    rv = _wsymlink(wcs_target, wcs_linkpath);
+
+    free(wcs_target);
+    free(wcs_linkpath);
+
+    return rv;
 }
 
 
@@ -182,7 +181,7 @@ ssize_t readlink(const char *path, char *buf, size_t bufsize)
 {
     char *ptr;
 
-    if (!path || !*path || !buf || bufsize == 0) {
+    if (!path || !*path || !buf || bufsize == 0 || bufsize > SSIZE_MAX) {
         errno = EINVAL; /* Invalid argument */
         return -1;
     }
@@ -201,7 +200,7 @@ ssize_t _wreadlink(const wchar_t *path, wchar_t *buf, size_t numwcs)
 {
     wchar_t *ptr;
 
-    if (!path || !*path || !buf || numwcs == 0) {
+    if (!path || !*path || !buf || numwcs == 0 || numwcs > SSIZE_MAX) {
         errno = EINVAL; /* Invalid argument */
         return -1;
     }

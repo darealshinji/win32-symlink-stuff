@@ -46,19 +46,30 @@ extern "C" {
 
 
 /* typedef for ssize_t */
-#if !defined(__MINGW32__) && !defined(_SSIZE_T_DEFINED)
-typedef __int64 ssize_t;
+#ifndef _SSIZE_T_DEFINED
 #define _SSIZE_T_DEFINED
+#undef ssize_t
+#ifdef _WIN64
+typedef __int64 ssize_t;
+#else
+typedef int ssize_t;
+#endif /* _WIN64 */
+#endif /* _SSIZE_T_DEFINED */
+
+
+#ifndef SSIZE_MAX
+#ifdef _WIN64
+#define SSIZE_MAX _I64_MAX
+#else
+#define SSIZE_MAX INT_MAX
+#endif
 #endif
 
 
 /* https://learn.microsoft.com/en-us/windows/win32/fileio/maximum-file-path-limitation */
-//#ifdef PATH_MAX
-//#undef PATH_MAX
-//#endif
-#define MODERN_MAX_PATH  32767
+#define MODERN_MAX_PATH 32767
 #ifndef PATH_MAX
-#define PATH_MAX  MODERN_MAX_PATH
+#define PATH_MAX MODERN_MAX_PATH
 #endif
 
 
@@ -75,6 +86,7 @@ typedef __int64 ssize_t;
 #ifndef IO_REPARSE_TAG_LX_SYMLINK
 #define IO_REPARSE_TAG_LX_SYMLINK   (0xA000001D)
 #endif
+
 
 
 /**
@@ -212,6 +224,7 @@ int _wlink(const wchar_t *oldpath, const wchar_t *newpath);
 
 /**
  * Read the value of the link 'path' and save it into the buffer 'buf'.
+ * 'bufsize/numwcs' must not exceed SSIZE_MAX.
  *
  * On success the string/character length of the link target is returned.
  * On error, -1 is returned, and errno is set to indicate the error.

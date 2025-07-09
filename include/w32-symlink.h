@@ -143,7 +143,7 @@ wchar_t *getCanonicalPathW(const wchar_t *lpFileName);
  *
  * pReparseTag is a pointer to the variable where the Reparse Tag will be
  * saved if reading the reparse data was successful. This can be used to
- * figure out what type of link this is.
+ * figure out what type of link this is. This parameter can be set NULL.
  */
 
 #ifdef _UNICODE
@@ -158,6 +158,12 @@ wchar_t *getLinkTargetW(const wchar_t *lpFileName, ULONG *pReparseTag);
 
 
 /**
+ * Whether lpFileName is a symbolic link or not.
+ *
+ * pReparseTag is a pointer to the variable where the Reparse Tag will be
+ * saved. This can be used to figure out what type of link this is.
+ * This parameter can be set NULL.
+ *
  * Return values of isSymlink():
  *  1 (TRUE)    lpFileName is a symbolic link
  *  0 (FALSE)   lpFileName exists and is NOT a symbolic link
@@ -170,8 +176,8 @@ wchar_t *getLinkTargetW(const wchar_t *lpFileName, ULONG *pReparseTag);
 #define isSymlink isSymlinkA
 #endif
 
-int isSymlinkA(const char *lpFileName);
-int isSymlinkW(const wchar_t *lpFileName);
+int isSymlinkA(const char *lpFileName, ULONG *pReparseTag);
+int isSymlinkW(const wchar_t *lpFileName, ULONG *pReparseTag);
 
 
 

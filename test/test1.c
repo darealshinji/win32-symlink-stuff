@@ -53,7 +53,7 @@ int main()
     puts("");
 
     puts("test isSymlinkA");
-    TEST(isSymlinkA(lnk) == TRUE);
+    TEST(isSymlinkA(lnk, NULL) == TRUE);
 
     return 0;
 }

@@ -453,7 +453,7 @@ int _lwstat64(const wchar_t *pathname, struct _stat64 *statbuf)
         return -1;
     }
 
-    if (!isSymlinkW(pathname)) {
+    if (!isSymlinkW(pathname, NULL)) {
         /* no symlink, use regular _wstat() function */
         return _wstat64(pathname, statbuf);
     }

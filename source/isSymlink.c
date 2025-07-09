@@ -24,21 +24,82 @@
 #include <windows.h>
 #include <wchar.h>
 #include "convert.h"
+#include "reparse_data_buffer.h"
 #include "w32-symlink.h"
 
 
-int isSymlinkW(const wchar_t *path)
+int isSymlinkW(const wchar_t *path, ULONG *tag)
 {
-    DWORD dwAttr = GetFileAttributesW(path);
+    UINT8 data[MAXIMUM_REPARSE_DATA_BUFFER_SIZE];
+    REPARSE_DATA_BUFFER *pData;
+    HANDLE handle;
+    DWORD dwAttr;
+
+    pData = (REPARSE_DATA_BUFFER *)data;
+    dwAttr = GetFileAttributesW(path);
 
     if (dwAttr == INVALID_FILE_ATTRIBUTES) {
+        /* error */
         return -1;
     }
 
-    return (dwAttr & FILE_ATTRIBUTE_REPARSE_POINT) ? TRUE : FALSE;
+    if (!(dwAttr & FILE_ATTRIBUTE_REPARSE_POINT)) {
+        /* not a symbolic link */
+        return FALSE;
+    }
+
+    if (!tag) {
+        /* a symbolic link but we don't
+         * need to know what kind of symlink */
+        return TRUE;
+    }
+
+    /* open path for reading */
+    handle = CreateFileW(path,
+                         0,
+                         FILE_SHARE_READ | FILE_SHARE_WRITE,
+                         NULL,
+                         OPEN_EXISTING,
+                         FILE_FLAG_OPEN_REPARSE_POINT | FILE_FLAG_BACKUP_SEMANTICS,
+                         NULL);
+
+    if (handle == INVALID_HANDLE_VALUE) {
+        return -1;
+    }
+
+    /* retrieve reparse data */
+    if (!DeviceIoControl(handle,
+                         FSCTL_GET_REPARSE_POINT,
+                         NULL,
+                         0,
+                         data,
+                         MAXIMUM_REPARSE_DATA_BUFFER_SIZE,
+                         NULL,
+                         NULL))
+    {
+        CloseHandle(handle);
+        return -1;
+    }
+
+    CloseHandle(handle);
+
+    *tag = pData->ReparseTag;
+
+    switch (*tag) {
+        case IO_REPARSE_TAG_SYMLINK:
+        case IO_REPARSE_TAG_MOUNT_POINT:
+        case IO_REPARSE_TAG_APPEXECLINK:
+        case IO_REPARSE_TAG_LX_SYMLINK:
+            return TRUE;
+        default:
+            break;
+    }
+
+    return FALSE;
 }
 
-int isSymlinkA(const char *path)
+
+int isSymlinkA(const char *path, ULONG *tag)
 {
     int rv;
     wchar_t *wstr;
@@ -46,7 +107,7 @@ int isSymlinkA(const char *path)
     wstr = convert_str_to_wcs(path);
     if (!wstr) return -1;
 
-    rv = isSymlinkW(wstr);
+    rv = isSymlinkW(wstr, tag);
     free(wstr);
 
     return rv;

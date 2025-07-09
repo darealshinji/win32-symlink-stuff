@@ -26,63 +26,9 @@
 #include <stdlib.h>
 #include <string.h>
 #include "convert.h"
+#include "reparse_data_buffer.h"
 #include "w32-symlink.h"
 
-
-/* https://learn.microsoft.com/en-us/windows-hardware/drivers/ddi/ntifs/ns-ntifs-_reparse_data_buffer */
-typedef struct {
-  ULONG  ReparseTag;
-  USHORT ReparseDataLength;
-  USHORT Reserved;
-  UINT8  DataBuffer[1];
-} REPARSE_DATA_BUFFER;
-
-/* Symbolic links */
-typedef struct {
-  ULONG  ReparseTag;
-  USHORT ReparseDataLength;
-  USHORT Reserved;
-  USHORT SubstituteNameOffset;
-  USHORT SubstituteNameLength;
-  USHORT PrintNameOffset;
-  USHORT PrintNameLength;
-  ULONG  Flags;
-  WCHAR  PathBuffer[1];
-} SYMLINK_REPARSE_BUFFER;
-
-/* Junction points */
-typedef struct {
-  ULONG  ReparseTag;
-  USHORT ReparseDataLength;
-  USHORT Reserved;
-  USHORT SubstituteNameOffset;
-  USHORT SubstituteNameLength;
-  USHORT PrintNameOffset;
-  USHORT PrintNameLength;
-  WCHAR  PathBuffer[1];
-} MOUNTPOINT_REPARSE_BUFFER;
-
-/* AppExec links (execution aliases) */
-/* (those you can find inside C:\Users\<Username>\AppData\Local\Microsoft\WindowsApps) */
-/* https://www.tiraniddo.dev/2019/09/overview-of-windows-execution-aliases.html */
-/* https://github.com/libuv/libuv/blob/a5c01d4de3695e9d9da34cfd643b5ff0ba582ea7/src/win/winapi.h#L4155 */
-typedef struct {
-  ULONG  ReparseTag;
-  USHORT ReparseDataLength;
-  USHORT Reserved;
-  ULONG  Unused;
-  WCHAR  StringList[1];
-} APPXLINK_REPARSE_BUFFER;
-
-/* Symbolic links from the LinuX SubSystem (UTF-8 formatted, no trailing NUL) */
-/* https://github.com/JFLarvoire/SysToolsLib/blob/829ecca8d95ade20f5e6241e1226d27e1a2443e7/C/MsvcLibX/include/reparsept.h#L286 */
-typedef struct {
-  ULONG  ReparseTag;
-  USHORT ReparseDataLength;
-  USHORT Reserved;
-  ULONG  Unused;
-  char   PathBuffer[1];
-} LXSS_SYMLINK_REPARSE_BUFFER;
 
 typedef struct {
   ULONG    tag;
@@ -115,7 +61,7 @@ static BOOL get_link_target(const wchar_t *path, LINK_TARGET *ltarget)
     pDataEnd = data + (MAXIMUM_REPARSE_DATA_BUFFER_SIZE - 1);
     maxlen = (pDataEnd - pData->DataBuffer) + 1;
 
-    switch (isSymlinkW(path))
+    switch (isSymlinkW(path, NULL))
     {
         /* it's a symlink */
         case TRUE:
@@ -224,7 +170,13 @@ static BOOL get_link_target(const wchar_t *path, LINK_TARGET *ltarget)
         /* Linux links */
         case IO_REPARSE_TAG_LX_SYMLINK:
             pLxSym = (LXSS_SYMLINK_REPARSE_BUFFER *)data;
-            len = pLxSym->ReparseDataLength - sizeof(pLxSym->Unused);
+
+            if (pLxSym->Version != 2) {
+                SetLastError(ERROR_NOT_SUPPORTED);
+                return FALSE;
+            }
+
+            len = pLxSym->ReparseDataLength - sizeof(pLxSym->Version);
             ltarget->utf8_string = malloc(len + 1);
             memcpy_s(ltarget->utf8_string, len + 1, pLxSym->PathBuffer, len);
             ltarget->utf8_string[len] = 0;

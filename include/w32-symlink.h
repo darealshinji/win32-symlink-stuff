@@ -80,6 +80,9 @@ typedef int ssize_t;
 #ifndef IO_REPARSE_TAG_MOUNT_POINT
 #define IO_REPARSE_TAG_MOUNT_POINT  (0xA0000003)
 #endif
+#ifndef IO_REPARSE_TAG_NFS
+#define IO_REPARSE_TAG_NFS          (0x80000014)
+#endif
 #ifndef IO_REPARSE_TAG_APPEXECLINK
 #define IO_REPARSE_TAG_APPEXECLINK  (0x8000001B)
 #endif

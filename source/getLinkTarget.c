@@ -23,11 +23,15 @@
  */
 #include <windows.h>
 #include <wchar.h>
+//#include <assert.h>
 #include <stdlib.h>
 #include <string.h>
 #include "convert.h"
 #include "reparse_data_buffer.h"
 #include "w32-symlink.h"
+
+/* https://learn.microsoft.com/en-us/openspecs/windows_protocols/ms-fscc/ff4df658-7f27-476a-8025-4074c0121eec */
+#define NFS_SPECFILE_LNK_MAXBYTES 2050
 
 
 typedef struct {
@@ -44,22 +48,21 @@ static BOOL get_link_target(const wchar_t *path, LINK_TARGET *ltarget)
     REPARSE_DATA_BUFFER *pData;
     SYMLINK_REPARSE_BUFFER *pSym;
     MOUNTPOINT_REPARSE_BUFFER *pMount;
+    NFS_LNK_REPARSE_BUFFER *pNfs;
     APPXLINK_REPARSE_BUFFER *pAppX;
     LXSS_SYMLINK_REPARSE_BUFFER *pLxSym;
     HANDLE handle;
     wchar_t *wstr;
     size_t off, len, i, buflen, maxlen;
 
-/*
-    const size_t maxlen = MAXIMUM_REPARSE_DATA_BUFFER_SIZE -
-                          (sizeof(pData->ReparseTag) +
-                           sizeof(pData->ReparseDataLength) +
-                           sizeof(pData->Reserved));
-*/
+    //assert(sizeof(WCHAR) == sizeof(wchar_t));
 
     pData = (REPARSE_DATA_BUFFER *)data;
     pDataEnd = data + (MAXIMUM_REPARSE_DATA_BUFFER_SIZE - 1);
-    maxlen = (pDataEnd - pData->DataBuffer) + 1;
+    maxlen = MAXIMUM_REPARSE_DATA_BUFFER_SIZE -
+             (sizeof(pData->ReparseTag) +
+              sizeof(pData->ReparseDataLength) +
+              sizeof(pData->Reserved));
 
     switch (isSymlinkW(path, NULL))
     {
@@ -119,7 +122,7 @@ static BOOL get_link_target(const wchar_t *path, LINK_TARGET *ltarget)
     switch (pData->ReparseTag) {
         /* symbolic links */
         case IO_REPARSE_TAG_SYMLINK:
-            pSym = (SYMLINK_REPARSE_BUFFER *)data;
+            pSym = (SYMLINK_REPARSE_BUFFER *)pData->DataBuffer;
             buflen = (pDataEnd - (UINT8 *)pSym->PathBuffer) / sizeof(wchar_t);
             off = pSym->SubstituteNameOffset / sizeof(wchar_t);
             len = pSym->SubstituteNameLength / sizeof(wchar_t);
@@ -133,7 +136,7 @@ static BOOL get_link_target(const wchar_t *path, LINK_TARGET *ltarget)
 
         /* junctions */
         case IO_REPARSE_TAG_MOUNT_POINT:
-            pMount = (MOUNTPOINT_REPARSE_BUFFER *)data;
+            pMount = (MOUNTPOINT_REPARSE_BUFFER *)pData->DataBuffer;
             buflen = (pDataEnd - (UINT8 *)pMount->PathBuffer) / sizeof(wchar_t);
             off = pMount->SubstituteNameOffset / sizeof(wchar_t);
             len = pMount->SubstituteNameLength / sizeof(wchar_t);
@@ -145,9 +148,33 @@ static BOOL get_link_target(const wchar_t *path, LINK_TARGET *ltarget)
             wstr = pMount->PathBuffer + off;
             break;
 
+        /* Network File System (NFS) component (untested) */
+        case IO_REPARSE_TAG_NFS:
+            pNfs = (NFS_LNK_REPARSE_BUFFER *)pData->DataBuffer;
+
+            if (pNfs->Type != NFS_SPECFILE_LNK) {
+                /* not a symbolic link */
+                SetLastError(ERROR_NOT_SUPPORTED);
+                return FALSE;
+            }
+
+            wstr = pNfs->PathBuffer;
+            len = (pDataEnd - (UINT8 *)wstr) / sizeof(wchar_t);
+
+            if (len > (NFS_SPECFILE_LNK_MAXBYTES / sizeof(wchar_t))) {
+                return FALSE;
+            }
+            break;
+
         /* Windows execution aliases */
         case IO_REPARSE_TAG_APPEXECLINK:
-            pAppX = (APPXLINK_REPARSE_BUFFER *)data;
+            pAppX = (APPXLINK_REPARSE_BUFFER *)pData->DataBuffer;
+
+            if (pAppX->StringCount != 3) {
+                SetLastError(ERROR_NOT_SUPPORTED);
+                return FALSE;
+            }
+
             wstr = pAppX->StringList;
             buflen = (pDataEnd - (UINT8 *)wstr) / sizeof(wchar_t);
 
@@ -169,14 +196,14 @@ static BOOL get_link_target(const wchar_t *path, LINK_TARGET *ltarget)
 
         /* Linux links */
         case IO_REPARSE_TAG_LX_SYMLINK:
-            pLxSym = (LXSS_SYMLINK_REPARSE_BUFFER *)data;
+            pLxSym = (LXSS_SYMLINK_REPARSE_BUFFER *)pData->DataBuffer;
 
             if (pLxSym->Version != 2) {
                 SetLastError(ERROR_NOT_SUPPORTED);
                 return FALSE;
             }
 
-            len = pLxSym->ReparseDataLength - sizeof(pLxSym->Version);
+            len = pData->ReparseDataLength - sizeof(pLxSym->Version);
             ltarget->utf8_string = malloc(len + 1);
             memcpy_s(ltarget->utf8_string, len + 1, pLxSym->PathBuffer, len);
             ltarget->utf8_string[len] = 0;

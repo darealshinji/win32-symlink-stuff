@@ -32,6 +32,7 @@ int isSymlinkW(const wchar_t *path, ULONG *tag)
 {
     UINT8 data[MAXIMUM_REPARSE_DATA_BUFFER_SIZE];
     REPARSE_DATA_BUFFER *pData;
+    NFS_LNK_REPARSE_BUFFER *pNfs;
     HANDLE handle;
     DWORD dwAttr;
 
@@ -91,6 +92,16 @@ int isSymlinkW(const wchar_t *path, ULONG *tag)
         case IO_REPARSE_TAG_APPEXECLINK:
         case IO_REPARSE_TAG_LX_SYMLINK:
             return TRUE;
+
+        case IO_REPARSE_TAG_NFS:
+            pNfs = (NFS_LNK_REPARSE_BUFFER *)data;
+
+            if (pNfs->Type != NFS_SPECFILE_LNK) {
+                SetLastError(ERROR_NOT_SUPPORTED);
+                return FALSE;
+            }
+            return TRUE;
+
         default:
             break;
     }

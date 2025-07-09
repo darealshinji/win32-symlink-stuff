@@ -4,6 +4,11 @@
 #include <windows.h>
 
 
+#ifndef NFS_SPECFILE_LNK
+#define NFS_SPECFILE_LNK (0x00000000014B4E4C)
+#endif
+
+
 /* https://learn.microsoft.com/en-us/windows-hardware/drivers/ddi/ntifs/ns-ntifs-_reparse_data_buffer */
 typedef struct {
   ULONG  ReparseTag;
@@ -15,9 +20,6 @@ typedef struct {
 
 /* Symbolic links */
 typedef struct {
-  ULONG  ReparseTag;
-  USHORT ReparseDataLength;
-  USHORT Reserved;
   USHORT SubstituteNameOffset;
   USHORT SubstituteNameLength;
   USHORT PrintNameOffset;
@@ -29,9 +31,6 @@ typedef struct {
 
 /* Junction points */
 typedef struct {
-  ULONG  ReparseTag;
-  USHORT ReparseDataLength;
-  USHORT Reserved;
   USHORT SubstituteNameOffset;
   USHORT SubstituteNameLength;
   USHORT PrintNameOffset;
@@ -45,10 +44,7 @@ typedef struct {
 /* https://www.tiraniddo.dev/2019/09/overview-of-windows-execution-aliases.html */
 /* https://github.com/libuv/libuv/blob/a5c01d4de3695e9d9da34cfd643b5ff0ba582ea7/src/win/winapi.h#L4155 */
 typedef struct {
-  ULONG  ReparseTag;
-  USHORT ReparseDataLength;
-  USHORT Reserved;
-  ULONG  Unused;
+  ULONG  StringCount;
   WCHAR  StringList[1];
 } APPXLINK_REPARSE_BUFFER;
 
@@ -57,12 +53,17 @@ typedef struct {
 /* https://learn.microsoft.com/en-us/openspecs/windows_protocols/ms-fscc/68337353-9153-4ee1-ac6b-419839c3b7ad */
 /* https://github.com/JFLarvoire/SysToolsLib/blob/829ecca8d95ade20f5e6241e1226d27e1a2443e7/C/MsvcLibX/include/reparsept.h#L286 */
 typedef struct {
-  ULONG  ReparseTag;
-  USHORT ReparseDataLength;
-  USHORT Reserved;
   ULONG  Version;
   char   PathBuffer[1];
 } LXSS_SYMLINK_REPARSE_BUFFER;
+
+
+/* Network File System (NFS) */
+/* https://learn.microsoft.com/en-us/openspecs/windows_protocols/ms-fscc/ff4df658-7f27-476a-8025-4074c0121eec */
+typedef struct {
+  UINT64 Type;
+  WCHAR  PathBuffer[1];
+} NFS_LNK_REPARSE_BUFFER;
 
 
 #endif /* W32_SYMLINK_REPARSE_DATA_BUFFER_H_INCLUDED */

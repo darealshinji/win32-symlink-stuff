@@ -36,6 +36,10 @@ int isSymlinkW(const wchar_t *path, ULONG *tag)
     HANDLE handle;
     DWORD dwAttr;
 
+    if (tag) {
+        *tag = 0;
+    }
+
     dwAttr = GetFileAttributesW(path);
 
     if (dwAttr == INVALID_FILE_ATTRIBUTES) {

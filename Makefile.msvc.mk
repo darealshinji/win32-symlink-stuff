@@ -10,7 +10,7 @@ SRCS = convert.c \
 	posix.c
 
 ARCHIVE = symlink.lib
-TEST_FILES = test\test1.exe test\test2.exe
+TEST_FILES = test\test1.exe test\test2.exe test\test3.exe
 
 
 all: $(ARCHIVE)
@@ -28,4 +28,7 @@ test/test1.exe: $(ARCHIVE)
 
 test/test2.exe: $(ARCHIVE)
 	cd test && $(CC) /nologo /MP $(CFLAGS) test2.c /Fe:test2.exe /link ..\$(ARCHIVE) $(LFLAGS)
+
+test/test3.exe: $(ARCHIVE)
+	cd test && $(CC) /nologo /MP $(CFLAGS) test3.c /Fe:test3.exe /link ..\$(ARCHIVE) $(LFLAGS)
 

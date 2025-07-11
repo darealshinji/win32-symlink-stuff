@@ -10,7 +10,7 @@ OBJS = source/convert.o \
 	source/posix.o
 
 ARCHIVE = symlink.a
-TEST_FILES = test/test1.exe test/test2.exe
+TEST_FILES = test/test1.exe test/test2.exe test/test3.exe
 
 
 all: $(ARCHIVE)
@@ -29,3 +29,5 @@ test/test1.exe: test/test1.o $(ARCHIVE)
 test/test2.exe: test/test2.o $(ARCHIVE)
 	$(CC) $(CFLAGS) $(CPPFLAGS) $^ -o $@ $(LDFLAGS)
 
+test/test3.exe: test/test3.o $(ARCHIVE)
+	$(CC) $(CFLAGS) $(CPPFLAGS) $^ -o $@ $(LDFLAGS)

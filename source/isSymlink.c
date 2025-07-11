@@ -36,7 +36,6 @@ int isSymlinkW(const wchar_t *path, ULONG *tag)
     HANDLE handle;
     DWORD dwAttr;
 
-    pData = (REPARSE_DATA_BUFFER *)data;
     dwAttr = GetFileAttributesW(path);
 
     if (dwAttr == INVALID_FILE_ATTRIBUTES) {
@@ -84,26 +83,23 @@ int isSymlinkW(const wchar_t *path, ULONG *tag)
 
     CloseHandle(handle);
 
+    pData = (REPARSE_DATA_BUFFER *)data;
     *tag = pData->ReparseTag;
 
-    switch (*tag) {
-        case IO_REPARSE_TAG_SYMLINK:
-        case IO_REPARSE_TAG_MOUNT_POINT:
-        case IO_REPARSE_TAG_APPEXECLINK:
-        case IO_REPARSE_TAG_LX_SYMLINK:
-            return TRUE;
+    switch (*tag)
+    {
+    case IO_REPARSE_TAG_SYMLINK:
+    case IO_REPARSE_TAG_MOUNT_POINT:
+    case IO_REPARSE_TAG_APPEXECLINK:
+    case IO_REPARSE_TAG_LX_SYMLINK:
+        return TRUE;
 
-        case IO_REPARSE_TAG_NFS:
-            pNfs = (NFS_LNK_REPARSE_BUFFER *)data;
+    case IO_REPARSE_TAG_NFS:
+        pNfs = (NFS_LNK_REPARSE_BUFFER *)pData->DataBuffer;
+        return (pNfs->Type == NFS_SPECFILE_LNK) ? TRUE : FALSE;
 
-            if (pNfs->Type != NFS_SPECFILE_LNK) {
-                SetLastError(ERROR_NOT_SUPPORTED);
-                return FALSE;
-            }
-            return TRUE;
-
-        default:
-            break;
+    default:
+        break;
     }
 
     return FALSE;

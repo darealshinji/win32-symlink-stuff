@@ -53,7 +53,8 @@ int main()
     puts("");
 
     puts("test isSymlinkA");
-    TEST(isSymlinkA(lnk, NULL) == TRUE);
+    tag = 0;
+    TEST(isSymlinkA(lnk, (ULONG *)&tag) == TRUE && tag == IO_REPARSE_TAG_SYMLINK);
 
     return 0;
 }

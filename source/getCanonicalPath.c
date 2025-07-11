@@ -75,7 +75,7 @@ static wchar_t *canonical_path(const wchar_t *path)
     }
 
     CloseHandle(handle);
-    if (buf) free(buf);
+    free(buf);
 
     return NULL;
 }

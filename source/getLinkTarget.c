@@ -224,8 +224,8 @@ static BOOL get_link_target(const wchar_t *path, LINK_TARGET *ltarget)
 char *getLinkTargetA(const char *path, ULONG *tag)
 {
     LINK_TARGET ltarget = { 0, NULL, NULL };
-    char *str;
     wchar_t *wstr;
+    char *str = NULL;
 
     if (!path) return NULL;
     wstr = convert_str_to_wcs(path);
@@ -234,18 +234,17 @@ char *getLinkTargetA(const char *path, ULONG *tag)
         free(wstr);
         return NULL;
     }
+
     free(wstr);
 
     if (tag) *tag = ltarget.tag;
 
-    if (ltarget.tag == IO_REPARSE_TAG_LX_SYMLINK) {
-        return ltarget.utf8_string;
+    if (ltarget.wide_string) {
+        str = convert_wcs_to_str(ltarget.wide_string);
+        free(ltarget.wide_string);
+    } else if (ltarget.utf8_string) {
+        str = ltarget.utf8_string;
     }
-
-    /* convert wide char string and free() string */
-    if (!ltarget.wide_string) return NULL;
-    str = convert_wcs_to_str(ltarget.wide_string);
-    free(ltarget.wide_string);
 
     return str;
 }
@@ -261,14 +260,12 @@ wchar_t *getLinkTargetW(const wchar_t *path, ULONG *tag)
 
     if (tag) *tag = ltarget.tag;
 
-    if (ltarget.tag != IO_REPARSE_TAG_LX_SYMLINK) {
-        return ltarget.wide_string;
+    if (ltarget.wide_string) {
+        wstr = ltarget.wide_string;
+    } else if (ltarget.utf8_string) {
+        wstr = convert_utf8_to_wcs(ltarget.utf8_string);
+        free(ltarget.utf8_string);
     }
-
-    /* convert string and free() wide char string */
-    if (!ltarget.utf8_string) return NULL;
-    wstr = convert_utf8_to_wcs(ltarget.utf8_string);
-    free(ltarget.utf8_string);
 
     return wstr;
 }

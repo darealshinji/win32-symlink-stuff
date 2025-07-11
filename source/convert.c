@@ -46,7 +46,7 @@ wchar_t *convert_utf8_to_wcs(const char *lpStr)
         return NULL;
     }
 
-    pwBuf[wlen] = L'\0';
+    pwBuf[wlen] = 0;
     return pwBuf;
 }
 
@@ -70,7 +70,7 @@ char *convert_wcs_to_str(const wchar_t *lpWstr)
         return NULL;
     }
 
-    buf[mbslen] = '\0';
+    buf[mbslen] = 0;
     return buf;
 }
 
@@ -94,7 +94,7 @@ wchar_t *convert_str_to_wcs(const char *str)
         return NULL;
     }
 
-    buf[len] = '\0';
+    buf[len] = 0;
 
     return buf;
 }

@@ -181,9 +181,13 @@ ssize_t readlink(const char *path, char *buf, size_t bufsize)
 {
     char *ptr;
 
-    if (!path || !*path || !buf || bufsize == 0 || bufsize > SSIZE_MAX) {
+    if (!path || !*path || !buf || bufsize == 0) {
         errno = EINVAL; /* Invalid argument */
         return -1;
+    }
+
+    if (bufsize > SSIZE_MAX) {
+        bufsize = SSIZE_MAX;
     }
 
     ptr = readlink_s(path, buf, bufsize);
@@ -200,9 +204,13 @@ ssize_t _wreadlink(const wchar_t *path, wchar_t *buf, size_t numwcs)
 {
     wchar_t *ptr;
 
-    if (!path || !*path || !buf || numwcs == 0 || numwcs > SSIZE_MAX) {
+    if (!path || !*path || !buf || numwcs == 0) {
         errno = EINVAL; /* Invalid argument */
         return -1;
+    }
+
+    if (numwcs > SSIZE_MAX) {
+        numwcs = SSIZE_MAX;
     }
 
     ptr = _wreadlink_s(path, buf, numwcs);

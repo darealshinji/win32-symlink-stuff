@@ -34,6 +34,21 @@
 #include "w32-symlink.h"
 
 
+#define HANDLE_STRUNCATE(XERRNO, XRETURN) \
+    \
+    switch (XERRNO) \
+    { \
+    case 0: \
+        break; \
+    case STRUNCATE: \
+        errno = ENOMEM; /* Not enough space/cannot allocate memory */ \
+        return XRETURN; \
+    default: \
+        errno = XERRNO; \
+        return XRETURN; \
+    }
+
+
 /* try to map some Windows error codes that might appear
  * to an errno value (mostly file operation error codes) */
 static int map_winerr_to_errno(DWORD dwErr)
@@ -249,17 +264,7 @@ char *readlink_s(const char *path, char *buf, size_t bufsize)
     rv = strncpy_s(buf, bufsize, ptr, _TRUNCATE);
     free(ptr);
 
-    switch (rv)
-    {
-    case 0:
-        break;
-    case STRUNCATE:
-        errno = ENOMEM; /* Not enough space/cannot allocate memory */
-        return NULL;
-    default:
-        errno = rv;
-        return NULL;
-    }
+    HANDLE_STRUNCATE(rv, NULL);
 
     return buf;
 }
@@ -291,17 +296,7 @@ wchar_t *_wreadlink_s(const wchar_t *path, wchar_t *buf, size_t numwcs)
     rv = wcsncpy_s(buf, numwcs, ptr, _TRUNCATE);
     free(ptr);
 
-    switch (rv)
-    {
-    case 0:
-        break;
-    case STRUNCATE:
-        errno = ENOMEM; /* Not enough space/cannot allocate memory */
-        return NULL;
-    default:
-        errno = rv;
-        return NULL;
-    }
+    HANDLE_STRUNCATE(rv, NULL);
 
     return buf;
 }
@@ -333,17 +328,7 @@ char *realpath_s(const char *path, char *buf, size_t bufsize)
     rv = strncpy_s(buf, bufsize, ptr, _TRUNCATE);
     free(ptr);
 
-    switch (rv)
-    {
-    case 0:
-        break;
-    case STRUNCATE:
-        errno = ENOMEM; /* Not enough space/cannot allocate memory */
-        return NULL;
-    default:
-        errno = rv;
-        return NULL;
-    }
+    HANDLE_STRUNCATE(rv, NULL);
 
     return buf;
 }
@@ -375,17 +360,7 @@ wchar_t *_wrealpath_s(const wchar_t *path, wchar_t *buf, size_t numwcs)
     rv = wcsncpy_s(buf, numwcs, ptr, _TRUNCATE);
     free(ptr);
 
-    switch (rv)
-    {
-    case 0:
-        break;
-    case STRUNCATE:
-        errno = ENOMEM; /* Not enough space/cannot allocate memory */
-        return NULL;
-    default:
-        errno = rv;
-        return NULL;
-    }
+    HANDLE_STRUNCATE(rv, NULL);
 
     return buf;
 }

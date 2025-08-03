@@ -252,7 +252,7 @@ char *getLinkTargetA(const char *path, ULONG *tag)
 wchar_t *getLinkTargetW(const wchar_t *path, ULONG *tag)
 {
     LINK_TARGET ltarget = { 0, NULL, NULL };
-    wchar_t *wstr;
+    wchar_t *wstr = NULL;
 
     if (!path || !get_link_target(path, &ltarget)) {
         return NULL;

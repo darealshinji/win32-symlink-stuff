@@ -1,7 +1,7 @@
 /**
  * The MIT License (MIT)
  *
- * Copyright (C) 2025 Carsten Janssen
+ * Copyright (C) 2025-2026 Carsten Janssen
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -62,10 +62,10 @@
   }
 
 
-IMPLEMENT_LSTAT (lstat,       lwstat,       stat,       time_t,     _off_t)
-IMPLEMENT_LSTAT (_lstat,      _lwstat,      _stat,      time_t,     _off_t)
-IMPLEMENT_LSTAT (_lstat32,    _lwstat32,    _stat32,    __time32_t, _off_t)
-IMPLEMENT_LSTAT (_lstati64,   _lwstati64,   _stati64,   time_t,     __int64)
+IMPLEMENT_LSTAT ( lstat,       lwstat,       stat,        time_t,    _off_t)
+IMPLEMENT_LSTAT (_lstat,      _lwstat,      _stat,        time_t,    _off_t)
+IMPLEMENT_LSTAT (_lstat32,    _lwstat32,    _stat32,    __time32_t,  _off_t)
+IMPLEMENT_LSTAT (_lstati64,   _lwstati64,   _stati64,     time_t,   __int64)
 IMPLEMENT_LSTAT (_lstat32i64, _lwstat32i64, _stat32i64, __time32_t, __int64)
-IMPLEMENT_LSTAT (_lstat64i32, _lwstat64i32, _stat64i32, __time64_t, _off_t)
+IMPLEMENT_LSTAT (_lstat64i32, _lwstat64i32, _stat64i32, __time64_t,  _off_t)
 

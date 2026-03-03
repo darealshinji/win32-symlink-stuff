@@ -1,7 +1,7 @@
 /**
  * The MIT License (MIT)
  *
- * Copyright (C) 2023-2025 Carsten Janssen
+ * Copyright (C) 2023-2026 Carsten Janssen
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -32,21 +32,6 @@
 #include <sys/stat.h>
 #include "convert.h"
 #include "w32-symlink.h"
-
-
-#define HANDLE_STRUNCATE(XERRNO, XRETURN) \
-    \
-    switch (XERRNO) \
-    { \
-    case 0: \
-        break; \
-    case STRUNCATE: \
-        errno = ENOMEM; /* Not enough space/cannot allocate memory */ \
-        return XRETURN; \
-    default: \
-        errno = XERRNO; \
-        return XRETURN; \
-    }
 
 
 /* try to map some Windows error codes that might appear
@@ -103,6 +88,74 @@ static int map_winerr_to_errno(DWORD dwErr)
     }
 
     return -1;
+}
+
+
+static char *return_path(char *ptr, char *buf, size_t bufsize)
+{
+    errno_t rv;
+
+    if (!ptr) {
+        errno = map_winerr_to_errno(GetLastError());
+        return NULL;
+    }
+
+    if (!buf) {
+        /* return allocated string */
+        return ptr;
+    }
+
+    /* copy result into target buffer */
+    rv = strncpy_s(buf, bufsize, ptr, _TRUNCATE);
+    free(ptr);
+
+    switch (rv)
+    {
+    case 0:
+        break;
+    case STRUNCATE:
+        errno = ENOMEM; /* Not enough space/cannot allocate memory */
+        return NULL;
+    default:
+        errno = rv;
+        return NULL;
+    }
+
+    return buf;
+}
+
+
+static wchar_t *_wreturn_path(wchar_t *ptr, wchar_t *buf, size_t numwcs)
+{
+    errno_t rv;
+
+    if (!ptr) {
+        errno = map_winerr_to_errno(GetLastError());
+        return NULL;
+    }
+
+    if (!buf) {
+        /* return allocated string */
+        return ptr;
+    }
+
+    /* copy result into target buffer */
+    rv = wcsncpy_s(buf, numwcs, ptr, _TRUNCATE);
+    free(ptr);
+
+    switch (rv)
+    {
+    case 0:
+        break;
+    case STRUNCATE:
+        errno = ENOMEM; /* Not enough space/cannot allocate memory */
+        return NULL;
+    default:
+        errno = rv;
+        return NULL;
+    }
+
+    return buf;
 }
 
 
@@ -240,129 +293,45 @@ ssize_t _wreadlink(const wchar_t *path, wchar_t *buf, size_t numwcs)
 
 char *readlink_s(const char *path, char *buf, size_t bufsize)
 {
-    errno_t rv;
-    char *ptr;
-
     if (!path || !*path || (buf && bufsize == 0)) {
         errno = EINVAL; /* Invalid argument */
         return NULL;
     }
 
-    ptr = getLinkTargetA(path, NULL);
-
-    if (!ptr) {
-        errno = map_winerr_to_errno(GetLastError());
-        return NULL;
-    }
-
-    if (!buf) {
-        /* return allocated string */
-        return ptr;
-    }
-
-    /* copy result into target buffer */
-    rv = strncpy_s(buf, bufsize, ptr, _TRUNCATE);
-    free(ptr);
-
-    HANDLE_STRUNCATE(rv, NULL);
-
-    return buf;
+    return return_path(getLinkTargetA(path, NULL), buf, bufsize);
 }
 
 
 wchar_t *_wreadlink_s(const wchar_t *path, wchar_t *buf, size_t numwcs)
 {
-    errno_t rv;
-    wchar_t *ptr;
-
     if (!path || !*path || (buf && numwcs == 0)) {
         errno = EINVAL; /* Invalid argument */
         return NULL;
     }
 
-    ptr = getLinkTargetW(path, NULL);
-
-    if (!ptr) {
-        errno = map_winerr_to_errno(GetLastError());
-        return NULL;
-    }
-
-    if (!buf) {
-        /* return allocated string */
-        return ptr;
-    }
-
-    /* copy result into target buffer */
-    rv = wcsncpy_s(buf, numwcs, ptr, _TRUNCATE);
-    free(ptr);
-
-    HANDLE_STRUNCATE(rv, NULL);
-
-    return buf;
+    return _wreturn_path(getLinkTargetW(path, NULL), buf, numwcs);
 }
 
 
 char *realpath_s(const char *path, char *buf, size_t bufsize)
 {
-    errno_t rv;
-    char *ptr;
-
     if (!path || !*path || (buf && bufsize == 0)) {
         errno = EINVAL; /* Invalid argument */
         return NULL;
     }
 
-    ptr = getCanonicalPathA(path);
-
-    if (!ptr) {
-        errno = map_winerr_to_errno(GetLastError());
-        return NULL;
-    }
-
-    if (!buf) {
-        /* return allocated string */
-        return ptr;
-    }
-
-    /* copy result into target buffer */
-    rv = strncpy_s(buf, bufsize, ptr, _TRUNCATE);
-    free(ptr);
-
-    HANDLE_STRUNCATE(rv, NULL);
-
-    return buf;
+    return return_path(getCanonicalPathA(path), buf, bufsize);
 }
 
 
 wchar_t *_wrealpath_s(const wchar_t *path, wchar_t *buf, size_t numwcs)
 {
-    errno_t rv;
-    wchar_t *ptr;
-
     if (!path || !*path || (buf && numwcs == 0)) {
         errno = EINVAL; /* Invalid argument */
         return NULL;
     }
 
-    ptr = getCanonicalPathW(path);
-
-    if (!ptr) {
-        errno = map_winerr_to_errno(GetLastError());
-        return NULL;
-    }
-
-    if (!buf) {
-        /* return allocated string */
-        return ptr;
-    }
-
-    /* copy result into target buffer */
-    rv = wcsncpy_s(buf, numwcs, ptr, _TRUNCATE);
-    free(ptr);
-
-    HANDLE_STRUNCATE(rv, NULL);
-
-    return buf;
+    return _wreturn_path(getCanonicalPathW(path), buf, numwcs);
 }
 
 

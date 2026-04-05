@@ -23,6 +23,7 @@
  */
 #include <windows.h>
 #include <wchar.h>
+#include <inttypes.h>
 #include "convert.h"
 #include "reparse_data_buffer.h"
 #include "w32-symlink.h"
@@ -30,9 +31,9 @@
 
 int isSymlinkW(const wchar_t *path, ULONG *tag)
 {
-    UINT8 data[MAXIMUM_REPARSE_DATA_BUFFER_SIZE];
+    uint8_t data[MAXIMUM_REPARSE_DATA_BUFFER_SIZE];
     REPARSE_DATA_BUFFER *pData;
-    NFS_LNK_REPARSE_BUFFER *pNfs;
+    NFS_REPARSE_BUFFER *pNfs;
     HANDLE handle;
     DWORD dwAttr;
 
@@ -99,7 +100,7 @@ int isSymlinkW(const wchar_t *path, ULONG *tag)
         return TRUE;
 
     case IO_REPARSE_TAG_NFS:
-        pNfs = (NFS_LNK_REPARSE_BUFFER *)pData->DataBuffer;
+        pNfs = (NFS_REPARSE_BUFFER *)pData->DataBuffer;
         return (pNfs->Type == NFS_SPECFILE_LNK) ? TRUE : FALSE;
 
     default:

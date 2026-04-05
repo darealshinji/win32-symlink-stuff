@@ -1,7 +1,7 @@
 /**
  * The MIT License (MIT)
  *
- * Copyright (C) 2023-2025 Carsten Janssen
+ * Copyright (C) 2023-2026 Carsten Janssen
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -23,7 +23,7 @@
  */
 #include <windows.h>
 #include <wchar.h>
-//#include <assert.h>
+#include <inttypes.h>
 #include <stdlib.h>
 #include <string.h>
 #include "convert.h"
@@ -43,19 +43,17 @@ typedef struct {
 
 static BOOL get_link_target(const wchar_t *path, LINK_TARGET *ltarget)
 {
-    UINT8 data[MAXIMUM_REPARSE_DATA_BUFFER_SIZE];
-    UINT8 *pDataEnd;
+    uint8_t data[MAXIMUM_REPARSE_DATA_BUFFER_SIZE];
+    uint8_t *pDataEnd;
     REPARSE_DATA_BUFFER *pData;
     SYMLINK_REPARSE_BUFFER *pSym;
     MOUNTPOINT_REPARSE_BUFFER *pMount;
-    NFS_LNK_REPARSE_BUFFER *pNfs;
+    NFS_REPARSE_BUFFER *pNfs;
     APPXLINK_REPARSE_BUFFER *pAppX;
     LXSS_SYMLINK_REPARSE_BUFFER *pLxSym;
     HANDLE handle;
     wchar_t *wstr;
     size_t off, len, i, buflen, maxlen;
-
-    //assert(sizeof(WCHAR) == sizeof(wchar_t));
 
     pData = (REPARSE_DATA_BUFFER *)data;
     pDataEnd = data + (MAXIMUM_REPARSE_DATA_BUFFER_SIZE - 1);
@@ -123,7 +121,7 @@ static BOOL get_link_target(const wchar_t *path, LINK_TARGET *ltarget)
         /* symbolic links */
         case IO_REPARSE_TAG_SYMLINK:
             pSym = (SYMLINK_REPARSE_BUFFER *)pData->DataBuffer;
-            buflen = (pDataEnd - (UINT8 *)pSym->PathBuffer) / sizeof(wchar_t);
+            buflen = (pDataEnd - (uint8_t *)pSym->PathBuffer) / sizeof(wchar_t);
             off = pSym->SubstituteNameOffset / sizeof(wchar_t);
             len = pSym->SubstituteNameLength / sizeof(wchar_t);
 
@@ -137,7 +135,7 @@ static BOOL get_link_target(const wchar_t *path, LINK_TARGET *ltarget)
         /* junctions */
         case IO_REPARSE_TAG_MOUNT_POINT:
             pMount = (MOUNTPOINT_REPARSE_BUFFER *)pData->DataBuffer;
-            buflen = (pDataEnd - (UINT8 *)pMount->PathBuffer) / sizeof(wchar_t);
+            buflen = (pDataEnd - (uint8_t *)pMount->PathBuffer) / sizeof(wchar_t);
             off = pMount->SubstituteNameOffset / sizeof(wchar_t);
             len = pMount->SubstituteNameLength / sizeof(wchar_t);
 
@@ -148,9 +146,9 @@ static BOOL get_link_target(const wchar_t *path, LINK_TARGET *ltarget)
             wstr = pMount->PathBuffer + off;
             break;
 
-        /* Network File System (NFS) component (untested) */
+        /* Network File System (NFS) component (untested!) */
         case IO_REPARSE_TAG_NFS:
-            pNfs = (NFS_LNK_REPARSE_BUFFER *)pData->DataBuffer;
+            pNfs = (NFS_REPARSE_BUFFER *)pData->DataBuffer;
 
             if (pNfs->Type != NFS_SPECFILE_LNK) {
                 /* not a symbolic link */
@@ -158,25 +156,26 @@ static BOOL get_link_target(const wchar_t *path, LINK_TARGET *ltarget)
                 return FALSE;
             }
 
-            wstr = pNfs->PathBuffer;
-            len = (pDataEnd - (UINT8 *)wstr) / sizeof(wchar_t);
+            len = pData->ReparseDataLength - sizeof(pNfs->Type);
 
-            if (len > (NFS_SPECFILE_LNK_MAXBYTES / sizeof(wchar_t))) {
+            if (len > NFS_SPECFILE_LNK_MAXBYTES) {
                 return FALSE;
             }
+
+            wstr = (wchar_t *)pNfs->DataBuffer;
             break;
 
         /* Windows execution aliases */
         case IO_REPARSE_TAG_APPEXECLINK:
             pAppX = (APPXLINK_REPARSE_BUFFER *)pData->DataBuffer;
 
-            if (pAppX->StringCount != 3) {
+            if (pAppX->Id != 3) {
                 SetLastError(ERROR_NOT_SUPPORTED);
                 return FALSE;
             }
 
             wstr = pAppX->StringList;
-            buflen = (pDataEnd - (UINT8 *)wstr) / sizeof(wchar_t);
+            buflen = (pDataEnd - (uint8_t *)wstr) / sizeof(wchar_t);
 
             /* NUL separated stringlist. We want the third entry. */
             for (i = 1; i < 3; i++) {

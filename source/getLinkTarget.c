@@ -31,7 +31,7 @@
 #include "w32-symlink.h"
 
 /* https://learn.microsoft.com/en-us/openspecs/windows_protocols/ms-fscc/ff4df658-7f27-476a-8025-4074c0121eec */
-#define NFS_SPECFILE_LNK_MAX 1025
+#define NFS_SPECFILE_LNK_MAX_BYTES 2050
 
 
 typedef struct {
@@ -156,12 +156,13 @@ static BOOL get_link_target(const wchar_t *path, LINK_TARGET *ltarget)
                 return FALSE;
             }
 
-            len = (pData->ReparseDataLength - sizeof(pNfs->Type)) / sizeof(wchar_t);
+            buflen = pData->ReparseDataLength - sizeof(pNfs->Type);
 
-            if (len > NFS_SPECFILE_LNK_MAX) {
+            if (buflen > NFS_SPECFILE_LNK_MAX_BYTES) {
                 return FALSE;
             }
 
+            len = buflen / sizeof(wchar_t);
             wstr = (wchar_t *)pNfs->DataBuffer;
             break;
 

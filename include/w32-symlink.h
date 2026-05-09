@@ -72,6 +72,11 @@ typedef int ssize_t;
 #endif
 
 
+/* used by symlinkat(): linkpath is interpreted relative to the current
+ * working directory (like symlink()) */
+#define AT_FDCWD -100
+
+
 /* https://learn.microsoft.com/en-us/windows/win32/fileio/maximum-file-path-limitation */
 #define MODERN_MAX_PATH 32767
 #ifndef PATH_MAX

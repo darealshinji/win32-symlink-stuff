@@ -27,6 +27,8 @@ SRCS = \
 	posix/realpath_w.c \
 	posix/symlink_a.c \
 	posix/symlink_w.c \
+	posix/symlinkat_a.c \
+	posix/symlinkat_w.c \
 	$(NULL)
 
 ARCHIVE = symlink.lib

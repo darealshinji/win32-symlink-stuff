@@ -29,6 +29,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include "w32-symlink.h"
+#include "common.h"
 #include "helper.h"
 
 
@@ -88,35 +89,6 @@ static xchar_t *canonical_path(const xchar_t *path)
     return NULL;
 }
 
-/**
- * Check if path begins with drive letter + colon + separator.
- *
- * The separator is required because "x:" without a separator
- * refers to the current working directory on drive "x:".
- * So if the current working directory on "c:" was "Users\Joe" then
- * "c:Windows" would actually resolve to "c:\Users\Joe\Windows" and
- * not "c:\Windows".
- */
-static BOOL is_absolute_path(const xchar_t *p)
-{
-    /* skip leading namespace specifier */
-    if (xstrncmp(p, _T("\\\\?\\"), 4) == 0 || /* "\\?\" file namespace */
-        xstrncmp(p, _T("\\\\.\\"), 4) == 0 || /* "\\.\" device namespace */
-        xstrncmp(p, _T("\\??\\"), 4) == 0)    /* "\??\" NT namespace? */
-    {
-        p += 4;
-    }
-
-    /* drive letter + colon + separator, i.e. "C:\" or "z:/" */
-    if (xstrnlen_s(p, 3) == 3 && p[1] == _T(':') &&
-        (p[2] == _T('\\') || p[2] == _T('/')) && xisalpha(p[0]))
-    {
-        return TRUE;
-    }
-
-    return FALSE;
-}
-
 
 /**
  * Result must be deallocated with free().
@@ -145,7 +117,7 @@ xchar_t *AW(getCanonicalPath)(const xchar_t *path)
      * This kind of second attempt seems to be required on AppExec links.
      * To prevent an erronous canonicalization we should only do a second
      * attempt on an absolute path. */
-    if (is_absolute_path(link)) {
+    if (_w(private_is_absolute_path)(link)) {
         buf = canonical_path(link);
     } else {
         /* buf is still set to NULL */

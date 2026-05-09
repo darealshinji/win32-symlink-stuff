@@ -27,6 +27,8 @@ OBJS = \
 	source/posix/realpath_w.o \
 	source/posix/symlink_a.o \
 	source/posix/symlink_w.o \
+	source/posix/symlinkat_a.o \
+	source/posix/symlinkat_w.o \
 	$(NULL)
 
 ARCHIVE = symlink.a

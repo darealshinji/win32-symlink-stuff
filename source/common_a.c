@@ -96,6 +96,31 @@ int private_map_winerr_to_errno(DWORD dwErr)
 }
 
 
+BOOL private_handle_is_directory(HANDLE hFile)
+{
+    BY_HANDLE_FILE_INFORMATION info;
+
+    /* retrieve file attributes */
+    if (GetFileInformationByHandle(hFile, &info) == FALSE) {
+        errno = private_map_winerr_to_errno(GetLastError());
+        return FALSE;
+    }
+
+    if (info.dwFileAttributes == INVALID_FILE_ATTRIBUTES) {
+        errno = ENODATA;
+        return FALSE;
+    }
+
+    /* check if newdirfd represents a directory */
+    if (!(info.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY)) {
+        errno = ENOTDIR;
+        return FALSE;
+    }
+
+    return TRUE;
+}
+
+
 BOOL private_get_link_target_from_handle(HANDLE handle, LINK_TARGET *ltarget)
 {
     uint8_t data[MAXIMUM_REPARSE_DATA_BUFFER_SIZE];

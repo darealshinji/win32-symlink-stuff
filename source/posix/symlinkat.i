@@ -1,7 +1,7 @@
 /**
  * The MIT License (MIT)
  *
- * Copyright (C) 2023-2026 Carsten Janssen
+ * Copyright (C) 2026 Carsten Janssen
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -21,53 +21,37 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE
  */
-#undef WIDE_CHAR_API
 #undef _UNICODE
 #undef UNICODE
 #include <windows.h>
 #include <wchar.h>
-#include <inttypes.h>
-#include <stdlib.h>
-#include <string.h>
+#include <errno.h>
 #include "w32-symlink.h"
-#include "convert.h"
-#include "helper.h"
 #include "common.h"
-#include "reparse_data_buffer.h"
+#include "helper.h"
 
 
-static BOOL get_link_target_open_file(const char *path, LINK_TARGET *ltarget)
+int _w(symlinkat)(const xchar_t *target, int dirfd, const xchar_t *linkpath)
 {
-#ifdef UTF8_EVERYWHERE
-    return private_get_link_target_open_file(path, ltarget);
-#else
-    wchar_t *wstr = convert_str_to_wcs(path);
+    xchar_t buffer[MODERN_MAX_PATH];
 
-    BOOL ret = _wprivate_get_link_target_open_file(wstr, ltarget);
-    free(wstr);
-
-    return ret;
-#endif
-}
-
-
-char *getLinkTargetA(const char *path, ULONG *tag)
-{
-    LINK_TARGET ltarget = { 0, NULL, NULL };
-    char *str = NULL;
-
-    if (!path || !get_link_target_open_file(path, &ltarget)) {
-        return NULL;
+    if (!target || !*target || !linkpath || !*linkpath) {
+        errno = EINVAL; /* Invalid argument */
+        return -1;
     }
 
-    if (tag) *tag = ltarget.tag;
-
-    if (ltarget.wide_string) {
-        str = convert_wcs_to_str(ltarget.wide_string);
-        free(ltarget.wide_string);
-    } else if (ltarget.utf8_string) {
-        str = ltarget.utf8_string;
+    /* if special value AT_FDCWD is used or the link path is absolute,
+     * the behavior is exactly like symlink() */
+    if (dirfd == AT_FDCWD || _w(private_is_absolute_path)(linkpath)) {
+        return _w(symlink)(target, linkpath);
     }
 
-    return str;
+    /* create full path; fails if dirfd doesn't belong to a directory */
+    if (_w(private_create_path_from_dirfd)(dirfd, buffer, _countof(buffer), linkpath) == FALSE) {
+        return -1;
+    }
+
+    /* call symlink() */
+    return _w(symlink)(target, buffer);
 }
+

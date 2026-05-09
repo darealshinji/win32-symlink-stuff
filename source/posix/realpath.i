@@ -24,101 +24,13 @@
 #undef _UNICODE
 #undef UNICODE
 #include <windows.h>
-#include <fcntl.h>
-#include <io.h>
 #include <errno.h>
 #include <wchar.h>
 #include <limits.h>
 #include <stdlib.h>
-#include <sys/types.h>
-#include <sys/stat.h>
 #include "w32-symlink.h"
 #include "common.h"
 #include "helper.h"
-
-
-#if defined(UTF8_EVERYWHERE) || defined(WIDE_CHAR_API)
-
-int _w(symlink)(const xchar_t *target, const xchar_t *linkpath)
-{
-    char mode = 0;
-    DWORD dwAttr;
-
-    if (!target || !*target || !linkpath || !*linkpath) {
-        errno = EINVAL; /* Invalid argument */
-        return -1;
-    }
-
-    dwAttr = AW(GetFileAttributes)(target);
-
-    /* set mode if target exists and is a directory */
-    if (dwAttr != INVALID_FILE_ATTRIBUTES && (dwAttr & FILE_ATTRIBUTE_DIRECTORY)) {
-        mode = 'D';
-    }
-
-    if (AW(createLink)(linkpath, target, mode) == FALSE) {
-        errno = private_map_winerr_to_errno(GetLastError());
-        return -1;
-    }
-
-    return 0;
-}
-
-#endif
-
-
-int _w(link)(const xchar_t *oldpath, const xchar_t *newpath)
-{
-    if (!oldpath || !*oldpath || !newpath || !*newpath) {
-        errno = EINVAL; /* Invalid argument */
-        return -1;
-    }
-
-    if (AW(createLink)(oldpath, newpath, 'H') == FALSE) {
-        errno = private_map_winerr_to_errno(GetLastError());
-        return -1;
-    }
-
-    return 0;
-}
-
-
-ssize_t _w(readlink)(const xchar_t *path, xchar_t *buf, size_t numcs)
-{
-    xchar_t *ptr;
-
-    if (!path || !*path || !buf || numcs == 0) {
-        errno = EINVAL; /* Invalid argument */
-        return -1;
-    }
-
-    if (numcs > SSIZE_MAX) {
-        numcs = SSIZE_MAX;
-    }
-
-    ptr = _w(readlink_s)(path, buf, numcs);
-
-    if (!ptr) {
-        return -1;
-    }
-
-    return (ssize_t)xstrlen(buf);
-}
-
-
-xchar_t *_w(readlink_s)(const xchar_t *path, xchar_t *buf, size_t numcs)
-{
-    xchar_t *ptr;
-
-    if (!path || !*path || (buf && numcs == 0)) {
-        errno = EINVAL; /* Invalid argument */
-        return NULL;
-    }
-
-    ptr = AW(getLinkTarget)(path, NULL);
-
-    return _w(private_return_path)(ptr, buf, numcs);
-}
 
 
 xchar_t *_w(realpath_s)(const xchar_t *path, xchar_t *buf, size_t numcs)

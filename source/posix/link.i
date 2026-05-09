@@ -21,41 +21,27 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE
  */
-#undef WIDE_CHAR_API
+#undef _UNICODE
+#undef UNICODE
+#include <windows.h>
+#include <errno.h>
+#include <wchar.h>
+#include "w32-symlink.h"
+#include "common.h"
+#include "helper.h"
 
-#include "posix.i"
 
-
-#if !defined(UTF8_EVERYWHERE)
-
-#include "convert.h"
-
-
-int symlink(const char *target, const char *linkpath)
+int _w(link)(const xchar_t *oldpath, const xchar_t *newpath)
 {
-    int rv;
-    wchar_t *wcs_linkpath, *wcs_target;
-
-    if (!target || !*target || !linkpath || !*linkpath) {
+    if (!oldpath || !*oldpath || !newpath || !*newpath) {
         errno = EINVAL; /* Invalid argument */
         return -1;
     }
 
-    if ((wcs_target = convert_str_to_wcs(target)) == NULL) {
+    if (AW(createLink)(oldpath, newpath, 'H') == FALSE) {
+        errno = private_map_winerr_to_errno(GetLastError());
         return -1;
     }
 
-    if ((wcs_linkpath = convert_str_to_wcs(linkpath)) == NULL) {
-        free(wcs_target);
-        return -1;
-    }
-
-    rv = _wsymlink(wcs_target, wcs_linkpath);
-
-    free(wcs_target);
-    free(wcs_linkpath);
-
-    return rv;
+    return 0;
 }
-
-#endif

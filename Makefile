@@ -1,9 +1,9 @@
-CFLAGS   = -Wall -Wextra -O3 -Iinclude
+CFLAGS   = -Wall -Wextra -O3 -Iinclude -Isource
 CPPFLAGS = -DWIN32_LEAN_AND_MEAN
 #CPPFLAGS += -DUTF8_EVERYWHERE
 LDFLAGS  = -s
 
-# ls -1 source/*.c | sed 's,^,\t,; s,\.c$,.o \\,'
+# ls -1 source/*.c source/posix/*.c | sed 's,^,\t,; s,\.c$,.o \\,'
 OBJS = \
 	source/common_a.o \
 	source/common_w.o \
@@ -16,11 +16,17 @@ OBJS = \
 	source/getLinkTargetW.o \
 	source/isSymlinkA.o \
 	source/isSymlinkW.o \
-	source/lstat.o \
-	source/lstat64_a.o \
-	source/lstat64_w.o \
-	source/posix_a.o \
-	source/posix_w.o \
+	source/posix/link_a.o \
+	source/posix/link_w.o \
+	source/posix/lstat.o \
+	source/posix/lstat64_a.o \
+	source/posix/lstat64_w.o \
+	source/posix/readlink_a.o \
+	source/posix/readlink_w.o \
+	source/posix/realpath_a.o \
+	source/posix/realpath_w.o \
+	source/posix/symlink_a.o \
+	source/posix/symlink_w.o \
 	$(NULL)
 
 ARCHIVE = symlink.a
@@ -32,7 +38,7 @@ all: $(ARCHIVE)
 tests: $(TEST_FILES)
 
 clean:
-	-rm -f *.a test/*.exe test/*.o source/*.o
+	-rm -f *.a test/*.exe test/*.o source/*.o source/posix/*.o
 
 $(ARCHIVE): $(OBJS)
 	$(AR) crs $@ $(OBJS)

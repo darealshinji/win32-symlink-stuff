@@ -3,7 +3,7 @@ CPPFLAGS = -DWIN32_LEAN_AND_MEAN
 #CPPFLAGS = -DUTF8_EVERYWHERE
 LIB_EXE  = lib.exe
 
-# (cd source && ls -1 *.c) | sed 's,^,\t,; s,$, \\,'
+# (cd source && ls -1 *.c posix/*.c) | sed 's,^,\t,; s,$, \\,'
 SRCS = \
 	common_a.c \
 	common_w.c \
@@ -16,11 +16,17 @@ SRCS = \
 	getLinkTargetW.c \
 	isSymlinkA.c \
 	isSymlinkW.c \
-	lstat.c \
-	lstat64_a.c \
-	lstat64_w.c \
-	posix_a.c \
-	posix_w.c \
+	posix/link_a.c \
+	posix/link_w.c \
+	posix/lstat.c \
+	posix/lstat64_a.c \
+	posix/lstat64_w.c \
+	posix/readlink_a.c \
+	posix/readlink_w.c \
+	posix/realpath_a.c \
+	posix/realpath_w.c \
+	posix/symlink_a.c \
+	posix/symlink_w.c \
 	$(NULL)
 
 ARCHIVE = symlink.lib

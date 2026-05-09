@@ -1,13 +1,27 @@
-CFLAGS = -Wall -Wextra -O3 -Iinclude
-LDFLAGS = -s
+CFLAGS   = -Wall -Wextra -O3 -Iinclude
+CPPFLAGS = -DWIN32_LEAN_AND_MEAN
+#CPPFLAGS += -DUTF8_EVERYWHERE
+LDFLAGS  = -s
 
-OBJS = source/convert.o \
-	source/createLink.o \
-	source/getCanonicalPath.o \
-	source/getLinkTarget.o \
-	source/isSymlink.o \
+# ls -1 source/*.c | sed 's,^,\t,; s,\.c$,.o \\,'
+OBJS = \
+	source/common_a.o \
+	source/common_w.o \
+	source/convert.o \
+	source/createLinkA.o \
+	source/createLinkW.o \
+	source/getCanonicalPathA.o \
+	source/getCanonicalPathW.o \
+	source/getLinkTargetA.o \
+	source/getLinkTargetW.o \
+	source/isSymlinkA.o \
+	source/isSymlinkW.o \
 	source/lstat.o \
-	source/posix.o
+	source/lstat64_a.o \
+	source/lstat64_w.o \
+	source/posix_a.o \
+	source/posix_w.o \
+	$(NULL)
 
 ARCHIVE = symlink.a
 TEST_FILES = test/test1.exe test/test2.exe test/test3.exe

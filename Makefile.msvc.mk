@@ -1,13 +1,27 @@
-CFLAGS  = /W3 /O2 /I..\include
-LIB_EXE = lib.exe
+CFLAGS   = -W3 -O2 -I..\include
+CPPFLAGS = -DWIN32_LEAN_AND_MEAN
+#CPPFLAGS = -DUTF8_EVERYWHERE
+LIB_EXE  = lib.exe
 
-SRCS = convert.c \
-	createLink.c \
-	getCanonicalPath.c \
-	getLinkTarget.c \
-	isSymlink.c \
+# (cd source && ls -1 *.c) | sed 's,^,\t,; s,$, \\,'
+SRCS = \
+	common_a.c \
+	common_w.c \
+	convert.c \
+	createLinkA.c \
+	createLinkW.c \
+	getCanonicalPathA.c \
+	getCanonicalPathW.c \
+	getLinkTargetA.c \
+	getLinkTargetW.c \
+	isSymlinkA.c \
+	isSymlinkW.c \
 	lstat.c \
-	posix.c
+	lstat64_a.c \
+	lstat64_w.c \
+	posix_a.c \
+	posix_w.c \
+	$(NULL)
 
 ARCHIVE = symlink.lib
 TEST_FILES = test\test1.exe test\test2.exe test\test3.exe
@@ -21,14 +35,14 @@ clean:
 	-del /Q *.lib test\*.exe test\*.obj source\*.obj
 
 $(ARCHIVE):
-	cd source && $(CC) /nologo /MP $(CFLAGS) /c $(SRCS) && $(LIB_EXE) *.obj /out:..\$(ARCHIVE)
+	cd source && $(CC) -nologo -MP $(CFLAGS) $(CPPFLAGS) -c $(SRCS) && $(LIB_EXE) *.obj -out:..\$(ARCHIVE)
 
 test/test1.exe: $(ARCHIVE)
-	cd test && $(CC) /nologo /MP $(CFLAGS) test1.c /Fe:test1.exe /link ..\$(ARCHIVE) $(LFLAGS)
+	cd test && $(CC) -nologo -MP $(CFLAGS) $(CPPFLAGS) test1.c -Fe:test1.exe -link ..\$(ARCHIVE) $(LFLAGS)
 
 test/test2.exe: $(ARCHIVE)
-	cd test && $(CC) /nologo /MP $(CFLAGS) test2.c /Fe:test2.exe /link ..\$(ARCHIVE) $(LFLAGS)
+	cd test && $(CC) -nologo -MP $(CFLAGS) $(CPPFLAGS) test2.c -Fe:test2.exe -link ..\$(ARCHIVE) $(LFLAGS)
 
 test/test3.exe: $(ARCHIVE)
-	cd test && $(CC) /nologo /MP $(CFLAGS) test3.c /Fe:test3.exe /link ..\$(ARCHIVE) $(LFLAGS)
+	cd test && $(CC) -nologo -MP $(CFLAGS) $(CPPFLAGS) test3.c -Fe:test3.exe -link ..\$(ARCHIVE) $(LFLAGS)
 

@@ -1,7 +1,7 @@
 /**
  * The MIT License (MIT)
  *
- * Copyright (C) 2023-2025 Carsten Janssen
+ * Copyright (C) 2023-2026 Carsten Janssen
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -29,6 +29,12 @@
 #include <limits.h>
 #include <sys/types.h>
 #include <sys/stat.h>
+
+
+/**
+ * #define UTF8_EVERYWHERE to assume UTF-8 encoding in "char" strings, otherwise
+ * strings will be converted to "wchar_t" and the *W API functions will be used.
+ */
 
 
 #ifdef __cplusplus
@@ -332,6 +338,8 @@ wchar_t *_wrealpath_s(const wchar_t *path, wchar_t *buf, size_t numwcs);
  * Get the canonicalized absolute pathname of 'path'. This string must later
  * be deallocated with 'free()'.
  *
+ * This function is identical to a call to _trealpath_s(path, NULL, 0).
+ *
  * On success an allocated string is returned.
  * On error, NULL is returned and errno is set to indicate the error.
  */
@@ -342,13 +350,8 @@ wchar_t *_wrealpath_s(const wchar_t *path, wchar_t *buf, size_t numwcs);
 #define _tcanonicalize_file_name canonicalize_file_name
 #endif
 
-inline char *canonicalize_file_name(const char *path) {
-    return realpath_s(path, NULL, 0);
-}
-
-inline wchar_t *_wcanonicalize_file_name(const wchar_t *path) {
-    return _wrealpath_s(path, NULL, 0);
-}
+char      *canonicalize_file_name(const char *path);
+wchar_t *_wcanonicalize_file_name(const wchar_t *path);
 
 
 
@@ -395,17 +398,11 @@ int _lwstat64i32(const wchar_t *path, struct _stat64i32 *buffer);
 int lstat(const char *path, struct stat *buffer);
 int lwstat(const wchar_t *path, struct stat *buffer);
 
-
 #ifndef stat64
 #define stat64 _stat64
 #endif
-
-inline int lstat64(const char *path, struct stat64 *buffer) {
-   return _lstat64(path, buffer);
-}
-inline int lwstat64(const wchar_t *path, struct stat64 *buffer) {
-   return _lwstat64(path, buffer);
-}
+int lstat64(const char *path, struct stat64 *buffer);
+int lwstat64(const wchar_t *path, struct stat64 *buffer);
 
 
 #undef __DEPRECATED

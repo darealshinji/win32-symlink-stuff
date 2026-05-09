@@ -3,7 +3,6 @@
 
 #include <wchar.h>
 
-
 /**
  * String conversion.
  * The returned string must be deallocated with free().

@@ -70,7 +70,7 @@ int main()
     TEST((rv = _lstat(lnk, &st)) == 0);
 
     if (rv == 0) {
-        printf("st_size = %ju\n", (uintmax_t)st.st_size);
+        printf("st_size = %llu\n", (unsigned long long)st.st_size);
 
         if (ctime_s(timebuf, _countof(timebuf), &st.st_mtime) == 0) {
             printf("st_mtime ~= %s\n", timebuf);
@@ -82,7 +82,7 @@ int main()
     TEST((rv = _stat(lnk, &st)) == 0);
 
     if (rv == 0) {
-        printf("st_size = %ju\n", (uintmax_t)st.st_size);
+        printf("st_size = %llu\n", (unsigned long long)st.st_size);
 
         if (ctime_s(timebuf, _countof(timebuf), &st.st_mtime) == 0) {
             printf("st_mtime ~= %s\n", timebuf);

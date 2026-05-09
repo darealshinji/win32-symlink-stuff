@@ -34,6 +34,10 @@
 #endif
 
 
+/* https://learn.microsoft.com/en-us/openspecs/windows_protocols/ms-fscc/ff4df658-7f27-476a-8025-4074c0121eec */
+#define NFS_SPECFILE_LNK_MAX_BYTES 2050
+
+
 /* https://learn.microsoft.com/en-us/windows-hardware/drivers/ddi/ntifs/ns-ntifs-_reparse_data_buffer */
 typedef struct {
   ULONG  ReparseTag;

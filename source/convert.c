@@ -21,6 +21,8 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE
  */
+#undef _UNICODE
+#undef UNICODE
 #include <windows.h>
 #include <wchar.h>
 #include <stdlib.h>

@@ -1,7 +1,7 @@
 /**
  * The MIT License (MIT)
  *
- * Copyright (C) 2023-2025 Carsten Janssen
+ * Copyright (C) 2023-2026 Carsten Janssen
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -21,25 +21,33 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE
  */
+#undef _UNICODE
+#undef UNICODE
 #include <windows.h>
 #include <wchar.h>
 #include <ctype.h>
 #include <stdlib.h>
 #include <stdio.h>
-#include "convert.h"
 #include "w32-symlink.h"
+#include "helper.h"
+
+
+#undef getCanonicalPath
 
 #ifndef GetFinalPathNameByHandle
+extern DWORD GetFinalPathNameByHandleA(HANDLE hFile, LPSTR lpszFilePath, DWORD cchFilePath, DWORD dwFlags);
 extern DWORD GetFinalPathNameByHandleW(HANDLE hFile, LPWSTR lpszFilePath, DWORD cchFilePath, DWORD dwFlags);
 #endif
 
 
+#if defined(UTF8_EVERYWHERE) || defined(WIDE_CHAR_API)
+
 /**
  * Result must be deallocated with free().
  */
-static wchar_t *canonical_path(const wchar_t *path)
+static xchar_t *canonical_path(const xchar_t *path)
 {
-    wchar_t *buf = NULL;
+    xchar_t *buf = NULL;
     HANDLE handle;
     DWORD len;
 
@@ -48,26 +56,26 @@ static wchar_t *canonical_path(const wchar_t *path)
         VOLUME_NAME_DOS;       /* Return path with drive letter (uses "\\?\" syntax). */
 
     /* open for reading */
-    handle = CreateFileW(path,
-                         0,
-                         FILE_SHARE_READ | FILE_SHARE_WRITE,
-                         NULL,
-                         OPEN_EXISTING,
-                         FILE_FLAG_BACKUP_SEMANTICS,
-                         NULL);
+    handle = AW(CreateFile)(path,
+                            0,
+                            FILE_SHARE_READ | FILE_SHARE_WRITE,
+                            NULL,
+                            OPEN_EXISTING,
+                            FILE_FLAG_BACKUP_SEMANTICS,
+                            NULL);
 
     if (handle == INVALID_HANDLE_VALUE) {
         return NULL;
     }
 
     /* figure out length */
-    len = GetFinalPathNameByHandleW(handle, NULL, 0, flags);
+    len = AW(GetFinalPathNameByHandle)(handle, NULL, 0, flags);
 
     if (len > 0) {
-        buf = malloc((len + 1) * sizeof(wchar_t));
+        buf = malloc((len + 1) * sizeof(xchar_t));
 
         /* resolve path from handle */
-        if (buf && GetFinalPathNameByHandleW(handle, buf, len+1, flags) > 0) {
+        if (buf && AW(GetFinalPathNameByHandle)(handle, buf, len+1, flags) > 0) {
             buf[len] = 0;
             CloseHandle(handle);
             return buf;
@@ -89,22 +97,19 @@ static wchar_t *canonical_path(const wchar_t *path)
  * "c:Windows" would actually resolve to "c:\Users\Joe\Windows" and
  * not "c:\Windows".
  */
-static BOOL is_absolute_path(const wchar_t *p)
+static BOOL is_absolute_path(const xchar_t *p)
 {
     /* skip leading namespace specifier */
-    if (wcsnlen_s(p, 4) == 4 &&
-        p[0] == L'\\' &&
-        p[3] == L'\\' &&
-        (wcsncmp(p+1, L"\\" "?", 2) == 0 || /* "\\?\" file namespace */
-         wcsncmp(p+1, L"\\" ".", 2) == 0 || /* "\\.\" device namespace */
-         wcsncmp(p+1, L"?"  "?", 2) == 0))  /* "\??\" NT namespace? */
+    if (xstrncmp(p, _T("\\\\?\\"), 4) == 0 || /* "\\?\" file namespace */
+        xstrncmp(p, _T("\\\\.\\"), 4) == 0 || /* "\\.\" device namespace */
+        xstrncmp(p, _T("\\??\\"), 4) == 0)    /* "\??\" NT namespace? */
     {
         p += 4;
     }
 
     /* drive letter + colon + separator, i.e. "C:\" or "z:/" */
-    if (wcsnlen_s(p, 3) == 3 && p[1] == L':' &&
-        (p[2] == L'\\' || p[2] == L'/') && iswalpha(p[0]))
+    if (xstrnlen_s(p, 3) == 3 && p[1] == _T(':') &&
+        (p[2] == _T('\\') || p[2] == _T('/')) && xisalpha(p[0]))
     {
         return TRUE;
     }
@@ -112,33 +117,13 @@ static BOOL is_absolute_path(const wchar_t *p)
     return FALSE;
 }
 
-char *getCanonicalPathA(const char *path)
-{
-    wchar_t *wcs_in, *wcs_out;
-    char *buf;
-
-    /* convert string */
-    wcs_in = convert_str_to_wcs(path);
-    if (!wcs_in) return NULL;
-
-    /* call wide character function */
-    wcs_out = getCanonicalPathW(wcs_in);
-    free(wcs_in);
-    if (!wcs_out) return NULL;
-
-    /* convert string */
-    buf = convert_wcs_to_str(wcs_out);
-    free(wcs_out);
-
-    return buf;
-}
 
 /**
  * Result must be deallocated with free().
  */
-wchar_t *getCanonicalPathW(const wchar_t *path)
+xchar_t *AW(getCanonicalPath)(const xchar_t *path)
 {
-    wchar_t *buf, *link;
+    xchar_t *buf, *link;
     ULONG tag = 0;
 
     buf = canonical_path(path);
@@ -146,7 +131,7 @@ wchar_t *getCanonicalPathW(const wchar_t *path)
 
     /* canonical_path() has failed.
      * Treat path as a symbolic link and try to get its target. */
-    link = getLinkTargetW(path, (ULONG *)&tag);
+    link = AW(getLinkTarget)(path, (ULONG *)&tag);
     if (!link) return NULL;
 
     /* We cannot reliably resolve LXSS symlinks to their Windows counterparts
@@ -171,3 +156,6 @@ wchar_t *getCanonicalPathW(const wchar_t *path)
 
     return buf;
 }
+
+#endif
+

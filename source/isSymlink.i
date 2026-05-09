@@ -1,7 +1,7 @@
 /**
  * The MIT License (MIT)
  *
- * Copyright (C) 2023-2025 Carsten Janssen
+ * Copyright (C) 2023-2026 Carsten Janssen
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -21,15 +21,23 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE
  */
+#undef _UNICODE
+#undef UNICODE
 #include <windows.h>
+#include <winioctl.h> /* FSCTL_GET_REPARSE_POINT */
 #include <wchar.h>
 #include <inttypes.h>
-#include "convert.h"
-#include "reparse_data_buffer.h"
 #include "w32-symlink.h"
+#include "convert.h"
+#include "helper.h"
+#include "reparse_data_buffer.h"
 
 
-int isSymlinkW(const wchar_t *path, ULONG *tag)
+#if defined(UTF8_EVERYWHERE) || defined(WIDE_CHAR_API)
+
+#undef isSymlink
+
+int AW(isSymlink)(const xchar_t *path, ULONG *tag)
 {
     uint8_t data[MAXIMUM_REPARSE_DATA_BUFFER_SIZE];
     REPARSE_DATA_BUFFER *pData;
@@ -41,7 +49,7 @@ int isSymlinkW(const wchar_t *path, ULONG *tag)
         *tag = 0;
     }
 
-    dwAttr = GetFileAttributesW(path);
+    dwAttr = AW(GetFileAttributes)(path);
 
     if (dwAttr == INVALID_FILE_ATTRIBUTES) {
         /* error */
@@ -60,13 +68,13 @@ int isSymlinkW(const wchar_t *path, ULONG *tag)
     }
 
     /* open path for reading */
-    handle = CreateFileW(path,
-                         0,
-                         FILE_SHARE_READ | FILE_SHARE_WRITE,
-                         NULL,
-                         OPEN_EXISTING,
-                         FILE_FLAG_OPEN_REPARSE_POINT | FILE_FLAG_BACKUP_SEMANTICS,
-                         NULL);
+    handle = AW(CreateFile)(path,
+                            0,
+                            FILE_SHARE_READ | FILE_SHARE_WRITE,
+                            NULL,
+                            OPEN_EXISTING,
+                            FILE_FLAG_OPEN_REPARSE_POINT | FILE_FLAG_BACKUP_SEMANTICS,
+                            NULL);
 
     if (handle == INVALID_HANDLE_VALUE) {
         return -1;
@@ -110,17 +118,5 @@ int isSymlinkW(const wchar_t *path, ULONG *tag)
     return FALSE;
 }
 
+#endif
 
-int isSymlinkA(const char *path, ULONG *tag)
-{
-    int rv;
-    wchar_t *wstr;
-
-    wstr = convert_str_to_wcs(path);
-    if (!wstr) return -1;
-
-    rv = isSymlinkW(wstr, tag);
-    free(wstr);
-
-    return rv;
-}

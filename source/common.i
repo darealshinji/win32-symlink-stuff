@@ -65,40 +65,6 @@ BOOL _w(private_is_absolute_path)(const xchar_t *p)
 }
 
 
-xchar_t *_w(private_return_path)(xchar_t *ptr, xchar_t *buf, size_t numcs)
-{
-    errno_t rv;
-
-    if (!ptr) {
-        errno = private_map_winerr_to_errno(GetLastError());
-        return NULL;
-    }
-
-    if (!buf) {
-        /* return allocated string */
-        return ptr;
-    }
-
-    /* copy result into target buffer */
-    rv = xstrncpy_s(buf, numcs, ptr, _TRUNCATE);
-    free(ptr);
-
-    switch (rv)
-    {
-    case 0:
-        break;
-    case STRUNCATE:
-        errno = ENOMEM; /* Not enough space/cannot allocate memory */
-        return NULL;
-    default:
-        errno = rv;
-        return NULL;
-    }
-
-    return buf;
-}
-
-
 BOOL _w(private_get_link_target_open_file)(const xchar_t *path, LINK_TARGET *ltarget)
 {
     HANDLE handle;

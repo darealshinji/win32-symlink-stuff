@@ -38,8 +38,8 @@ int main()
     TEST(symlink(ntdll, lnk) == 0);
     puts("");
 
-    puts("test realpath_s()");
-    char *path = realpath_s("./././link_to_NtDLL", NULL, 0);
+    puts("test canonicalize_file_name()");
+    char *path = canonicalize_file_name("./././link_to_NtDLL");
     TEST(path);
 
     if (path) {

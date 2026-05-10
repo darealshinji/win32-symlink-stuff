@@ -34,43 +34,58 @@
 #include "helper.h"
 
 
-xchar_t *_w(realpath_s)(const xchar_t *path, xchar_t *buf, size_t numcs)
+xchar_t *_w(realpath)(const xchar_t *path, xchar_t *resolved_path)
 {
     xchar_t *ptr;
+    size_t len;
 
-    if (!path || !*path || (buf && numcs == 0)) {
+    if (!path || !*path) {
         errno = EINVAL; /* Invalid argument */
         return NULL;
     }
 
-    ptr = AW(getCanonicalPath)(path);
-
-    return _w(private_return_path)(ptr, buf, numcs);
-}
-
-
-xchar_t *_w(realpath)(const xchar_t *path, xchar_t *resolved_path)
-{
-    xchar_t buf[PATH_MAX];
-    xchar_t *ptr;
-    size_t len;
-
-    ptr = _w(realpath_s)(path, buf, PATH_MAX);
+    ptr = AW(getCanonicalPath)(path); /* returns allocated string */
 
     if (!ptr) {
-        /* error (including truncation from exceeding PATH_MAX) */
+        errno = private_map_winerr_to_errno(GetLastError());
+        return NULL;
+    }
+
+    len = xstrlen(ptr);
+
+    if (len > (PATH_MAX-1)) {
+        /* pathname exceeded PATH_MAX (including terminating NUL character) */
+        free(ptr);
+        errno = ENAMETOOLONG;
         return NULL;
     }
 
     if (!resolved_path) {
-        /* return allocated copy */
-        return _xstrdup(buf);
+        return ptr; /* return allocated string */
     }
 
-    len = xstrlen(buf);
-    xmemcpy_s(resolved_path, PATH_MAX, buf, len);
-    resolved_path[len] = 0;
+    xmemcpy_s(resolved_path, PATH_MAX, ptr, len + 1);
+    free(ptr);
 
     return resolved_path;
 }
 
+
+xchar_t *_w(canonicalize_file_name)(const xchar_t *path)
+{
+    xchar_t *ptr;
+
+    if (!path || !*path) {
+        errno = EINVAL; /* Invalid argument */
+        return NULL;
+    }
+
+    ptr = AW(getCanonicalPath)(path); /* returns allocated string */
+
+    if (!ptr) {
+        errno = private_map_winerr_to_errno(GetLastError());
+        return NULL;
+    }
+
+    return ptr;
+}

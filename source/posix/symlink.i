@@ -36,6 +36,16 @@
 static BOOL target_is_directory(const xchar_t *target);
 
 
+#if defined(UTF8_EVERYWHERE) || defined(WIDE_CHAR_API)
+static BOOL target_is_directory(const xchar_t *target)
+{
+    DWORD dwAttr = AW(GetFileAttributes)(target);
+
+    return (dwAttr != INVALID_FILE_ATTRIBUTES && (dwAttr & FILE_ATTRIBUTE_DIRECTORY));
+}
+#endif
+
+
 int _w(symlink)(const xchar_t *target, const xchar_t *linkpath)
 {
     char mode = 0;

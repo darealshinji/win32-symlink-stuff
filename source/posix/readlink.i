@@ -34,27 +34,55 @@
 #include "helper.h"
 
 
-ssize_t _w(readlink)(const xchar_t *path, xchar_t *buf, size_t numcs)
+
+static ssize_t xreadlink(const xchar_t *path, xchar_t *buf, size_t numcs)
 {
+    errno_t rv;
     xchar_t *ptr;
 
+    ptr = AW(getLinkTarget)(path, NULL);
+
+    if (!ptr) {
+        errno = private_map_winerr_to_errno(GetLastError());
+        return -1;
+    }
+
+    /* copy result into target buffer */
+    rv = xstrncpy_s(buf, numcs, ptr, _TRUNCATE);
+    free(ptr);
+
+    /* truncate silently */
+    if (rv == 0 || rv == STRUNCATE) {
+        return (ssize_t)xstrlen(buf);
+    }
+
+    /* error */
+    errno = rv;
+
+    return -1;
+}
+
+
+ssize_t _w(readlink)(const xchar_t *path, xchar_t *buf, size_t numcs)
+{
     if (!path || !*path || !buf || numcs == 0) {
         errno = EINVAL; /* Invalid argument */
         return -1;
     }
 
+    /* how to handle numcs if it exceeds
+     * SSIZE_MAX is implementation defined */
     if (numcs > SSIZE_MAX) {
         numcs = SSIZE_MAX;
     }
 
-    ptr = _w(readlink_s)(path, buf, numcs);
-
-    return ptr ? (ssize_t)xstrlen(buf) : -1;
+    return xreadlink(path, buf, numcs);
 }
 
 
 xchar_t *_w(readlink_s)(const xchar_t *path, xchar_t *buf, size_t numcs)
 {
+    errno_t rv;
     xchar_t *ptr;
 
     if (!path || !*path || (buf && numcs == 0)) {
@@ -64,6 +92,109 @@ xchar_t *_w(readlink_s)(const xchar_t *path, xchar_t *buf, size_t numcs)
 
     ptr = AW(getLinkTarget)(path, NULL);
 
-    return _w(private_return_path)(ptr, buf, numcs);
+    if (!ptr) {
+        errno = private_map_winerr_to_errno(GetLastError());
+        return NULL;
+    }
+
+    /* return full allocated string if 'buf' was set NULL */
+    if (!buf) {
+        return ptr;
+    }
+
+    /* copy result into target buffer */
+    rv = xstrncpy_s(buf, numcs, ptr, _TRUNCATE);
+    free(ptr);
+
+    switch (rv)
+    {
+    case 0:
+        break;
+    case STRUNCATE:
+        errno = ENOMEM; /* Not enough space/cannot allocate memory */
+        return NULL;
+    default:
+        errno = rv;
+        return NULL;
+    }
+
+    return buf;
+}
+
+
+
+ssize_t _w(readlinkat)(int dirfd, const xchar_t *path, xchar_t *buf, size_t numcs)
+{
+    xchar_t *buf_path;
+    ssize_t rv;
+    int errsav;
+
+    if (!path || !*path || !buf || numcs == 0) {
+        errno = EINVAL; /* Invalid argument */
+        return -1;
+    }
+
+    /* how to handle numcs if it exceeds
+     * SSIZE_MAX is implementation defined */
+    if (numcs > SSIZE_MAX) {
+        numcs = SSIZE_MAX;
+    }
+
+    /* if special value AT_FDCWD is used or it's an absolute path,
+     * the behavior is exactly like readlink() */
+    if (dirfd == AT_FDCWD || _w(private_is_absolute_path)(path)) {
+        return xreadlink(path, buf, numcs);
+    }
+
+    /* create full path; fails if dirfd doesn't belong to a directory */
+    buf_path = _w(private_create_path_from_dirfd)(dirfd, path);
+
+    if (!buf_path) {
+        /* errno is set */
+        return -1;
+    }
+
+    rv = xreadlink(buf_path, buf, numcs);
+
+    errsav = errno;
+    free(buf_path);
+    errno = errsav;
+
+    return rv;
+}
+
+
+xchar_t *_w(readlinkat_s)(int dirfd, const xchar_t *path, xchar_t *buf, size_t numcs)
+{
+    xchar_t *buf_path, *ptr;
+    int errsav;
+
+    if (!path || !*path || (buf && numcs == 0)) {
+        errno = EINVAL; /* Invalid argument */
+        return NULL;
+    }
+
+    /* if special value AT_FDCWD is used or it's an absolute path,
+     * the behavior is exactly like readlink_s() */
+    if (dirfd == AT_FDCWD || _w(private_is_absolute_path)(path)) {
+        return _w(readlink_s)(path, buf, numcs);
+    }
+
+    /* create full path; fails if dirfd doesn't belong to a directory */
+    buf_path = _w(private_create_path_from_dirfd)(dirfd, path);
+
+    if (!buf_path) {
+        /* errno is set */
+        return NULL;
+    }
+
+    /* call readlink_s() */
+    ptr = _w(readlink_s)(buf_path, buf, numcs);
+
+    errsav = errno;
+    free(buf_path);
+    errno = errsav;
+
+    return ptr;
 }
 

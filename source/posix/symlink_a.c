@@ -33,6 +33,7 @@
 
 
 /* convert filename and call GetFileAttributesW() */
+#ifndef UTF8_EVERYWHERE
 static BOOL target_is_directory(const char *target)
 {
     DWORD dwAttr;
@@ -47,4 +48,5 @@ static BOOL target_is_directory(const char *target)
 
     return (dwAttr != INVALID_FILE_ATTRIBUTES && (dwAttr & FILE_ATTRIBUTE_DIRECTORY));
 }
+#endif
 

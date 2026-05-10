@@ -27,8 +27,6 @@ SRCS = \
 	posix/oldnames.c \
 	posix/readlink_a.c \
 	posix/readlink_w.c \
-	posix/readlinkat_a.c \
-	posix/readlinkat_w.c \
 	posix/realpath_a.c \
 	posix/realpath_w.c \
 	posix/symlink_a.c \

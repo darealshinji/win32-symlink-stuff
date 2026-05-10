@@ -218,6 +218,10 @@ inline int linkat(int olddirfd, const char *oldpath,
  * Read the value of the link 'path' and save it into the buffer 'buf'.
  * 'bufsize/numwcs' is limited to SSIZE_MAX.
  *
+ * readlink() does not append a terminating null byte to buf. It will (silently)
+ * truncate the contents (to a length of bufsiz characters), in case the buffer
+ * is too small to hold all of the contents.
+ *
  * On success the string/character length of the link target is returned.
  * On error, -1 is returned, and errno is set to indicate the error.
  *
@@ -245,6 +249,8 @@ __DEPRECATED /* use readlink_s instead! */ ssize_t readlink(
 
 /**
  * Read the value of the link 'path' and save it into the buffer 'buf'.
+ *
+ * If the 'buf' is too small to hold the contents the function returns with an error.
  *
  * If 'buf' is NULL, 'bufsize/numwcs' is ignored and an allocated string
  * will be returned on success. This string must be deallocated with 'free()'.
@@ -345,6 +351,7 @@ inline char *readlinkat_s(int dirfd, const char *path, char *buf, size_t bufsize
 /**
  * Get the canonicalized absolute pathname of 'path' and save it in the buffer
  * pointed to by 'resolved_path' up to a maximum of PATH_MAX bytes.
+ *
  * If 'resolved_path' is NULL, an allocated string up to PATH_MAX size will be
  * returned on success. This string must be deallocated with 'free()'.
  *
@@ -352,7 +359,7 @@ inline char *readlinkat_s(int dirfd, const char *path, char *buf, size_t bufsize
  * On error, NULL is returned, the contents of 'resolved_path' are undefined and
  * errno is set to indicate the error.
  *
- * This function is deprecated in favor of _trealpath_s.
+ * This function is deprecated in favor of _tcanonicalize_file_name.
  */
 
 #ifdef _UNICODE
@@ -361,45 +368,15 @@ inline char *readlinkat_s(int dirfd, const char *path, char *buf, size_t bufsize
 #define _trealpath _realpath
 #endif
 
-__DEPRECATED /* use _realpath_s instead! */ char *_realpath(
+__DEPRECATED /* use _canonicalize_file_name instead! */ char *_realpath(
     const char *path, char *resolved_path);
 
-__DEPRECATED /* use _wrealpath_s instead! */ wchar_t *_wrealpath(
+__DEPRECATED /* use _wcanonicalize_file_name instead! */ wchar_t *_wrealpath(
     const wchar_t *path, wchar_t *resolved_path);
 
 #ifndef NO_OLDNAMES
-__DEPRECATED /* use realpath_s instead! */ char *realpath(
+__DEPRECATED /* use canonicalize_file_name instead! */ char *realpath(
     const char *path, char *resolved_path);
-#endif
-
-
-
-/**
- * Get the canonicalized absolute pathname of 'path' and save it in the buffer 'buf'.
- * If 'buf' is NULL, 'bufsize/numwcs' is ignored and an allocated string
- * will be returned on success. This string must be deallocated with 'free()'.
- *
- * This function is similar to _trealpath except the buffer size is set
- * explicitly and may not be limited to PATH_MAX.
- *
- * On success a pointer to the buffer is returned.
- * On error, NULL is returned, the contents of 'buf' are undefined and errno
- * is set to indicate the error.
- */
-
-#ifdef _UNICODE
-#define _trealpath_s _wrealpath_s
-#else
-#define _trealpath_s _realpath_s
-#endif
-
-char     *_realpath_s(const char *path, char *buf, size_t bufsize);
-wchar_t *_wrealpath_s(const wchar_t *path, wchar_t *buf, size_t numwcs);
-
-#ifndef NO_OLDNAMES
-inline char *realpath_s(const char *path, char *buf, size_t bufsize) {
-    return _realpath_s(path, buf, bufsize);
-}
 #endif
 
 
@@ -408,7 +385,7 @@ inline char *realpath_s(const char *path, char *buf, size_t bufsize) {
  * Get the canonicalized absolute pathname of 'path'. This string must later
  * be deallocated with 'free()'.
  *
- * This function is identical to a call to _trealpath_s(path, NULL, 0).
+ * This function is identical to a call to _trealpath(path, NULL, 0).
  *
  * On success an allocated string is returned.
  * On error, NULL is returned and errno is set to indicate the error.
@@ -420,13 +397,8 @@ inline char *realpath_s(const char *path, char *buf, size_t bufsize) {
 #define _tcanonicalize_file_name _canonicalize_file_name
 #endif
 
-inline char *_canonicalize_file_name(const char *path) {
-    return _realpath_s(path, NULL, 0);
-}
-
-inline wchar_t *_wcanonicalize_file_name(const wchar_t *path) {
-    return _wrealpath_s(path, NULL, 0);
-}
+char     *_canonicalize_file_name(const char *path);
+wchar_t *_wcanonicalize_file_name(const wchar_t *path);
 
 #ifndef NO_OLDNAMES
 inline char *canonicalize_file_name(const char *path) {

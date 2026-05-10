@@ -38,7 +38,7 @@ int _w(link)(const xchar_t *oldpath, const xchar_t *newpath)
         return -1;
     }
 
-    if (AW(createLink)(oldpath, newpath, 'H') == FALSE) {
+    if (AW(createLink)(oldpath, newpath, 'H') != TRUE) {
         errno = private_map_winerr_to_errno(GetLastError());
         return -1;
     }

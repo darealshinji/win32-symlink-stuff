@@ -49,7 +49,7 @@ int _w(symlink)(const xchar_t *target, const xchar_t *linkpath)
         mode = 'D';
     }
 
-    if (AW(createLink)(linkpath, target, mode) == FALSE) {
+    if (AW(createLink)(linkpath, target, mode) != TRUE) {
         errno = private_map_winerr_to_errno(GetLastError());
         return -1;
     }

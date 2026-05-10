@@ -29,6 +29,7 @@
 #include <limits.h>
 #include <stdlib.h>
 #include "w32-symlink.h"
+#include "w32-symlink-posix.h"
 #include "common.h"
 #include "helper.h"
 

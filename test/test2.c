@@ -8,7 +8,7 @@
 #include <limits.h>
 #include <time.h>
 
-#include "w32-symlink.h"
+#include "w32-symlink-posix.h"
 
 #define TEST(x)  puts((x) ? "success" : "failure")
 

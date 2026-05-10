@@ -27,7 +27,7 @@
 #include <wchar.h>
 #include <sys/types.h>
 #include <sys/stat.h>
-#include "w32-symlink.h"
+#include "w32-symlink-posix.h"
 #include "convert.h"
 
 

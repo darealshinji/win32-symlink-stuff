@@ -36,8 +36,6 @@
 #include "reparse_data_buffer.h"
 
 
-#include "common.i"
-
 
 /* try to map some Windows error codes that might appear
  * to an errno value (mostly file operation error codes) */

@@ -28,6 +28,7 @@
 #include <windows.h>
 #include <wchar.h>
 #include <stdlib.h>
+#include "w32-symlink.h"
 #include "convert.h"
 #include "common.h"
 

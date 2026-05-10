@@ -6,9 +6,9 @@ LDFLAGS   = -s
 
 # ls -1 source/*.c source/posix/*.c | sed 's,^,\t,; s,\.c$,.o \\,'
 OBJS = \
-	source/common.o \
 	source/common_a.o \
 	source/common_w.o \
+	source/common_x.o \
 	source/convert.o \
 	source/createLinkA.o \
 	source/createLinkW.o \

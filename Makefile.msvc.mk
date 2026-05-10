@@ -5,9 +5,9 @@ LIB_EXE  = lib.exe
 
 # (cd source && ls -1 *.c posix/*.c) | sed 's,^,\t,; s,$, \\,'
 SRCS = \
-	common.c \
 	common_a.c \
 	common_w.c \
+	common_x.c \
 	convert.c \
 	createLinkA.c \
 	createLinkW.c \

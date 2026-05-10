@@ -34,7 +34,7 @@
 #include <windows.h>
 #include <wchar.h>
 #include <stdlib.h>
-#include "w32-symlink.h"
+#include "w32-symlink-posix.h"
 #include "convert.h"
 
 

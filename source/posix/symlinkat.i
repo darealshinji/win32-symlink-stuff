@@ -31,7 +31,7 @@
 #include "helper.h"
 
 
-int _w(symlinkat)(const xchar_t *target, int dirfd, const xchar_t *linkpath)
+int _w(symlinkat)(const xchar_t *target, int newdirfd, const xchar_t *linkpath)
 {
     xchar_t buffer[MODERN_MAX_PATH];
 
@@ -42,12 +42,12 @@ int _w(symlinkat)(const xchar_t *target, int dirfd, const xchar_t *linkpath)
 
     /* if special value AT_FDCWD is used or the link path is absolute,
      * the behavior is exactly like symlink() */
-    if (dirfd == AT_FDCWD || _w(private_is_absolute_path)(linkpath)) {
+    if (newdirfd == AT_FDCWD || _w(private_is_absolute_path)(linkpath)) {
         return _w(symlink)(target, linkpath);
     }
 
-    /* create full path; fails if dirfd doesn't belong to a directory */
-    if (_w(private_create_path_from_dirfd)(dirfd, buffer, _countof(buffer), linkpath) == FALSE) {
+    /* create full path; fails if newdirfd doesn't belong to a directory */
+    if (_w(private_create_path_from_dirfd)(newdirfd, buffer, _countof(buffer), linkpath) == FALSE) {
         return -1;
     }
 

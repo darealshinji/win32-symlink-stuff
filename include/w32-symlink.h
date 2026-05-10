@@ -224,6 +224,30 @@ int _wsymlink(const wchar_t *target, const wchar_t *linkpath);
 
 
 /**
+ * Creates a symbolic link named 'linkpath' pointing to the target named 'target'
+ * relative to the directory referred to by the file descriptor newdirfd.
+ *
+ * The behavior is identical to symlink() in these two cases:
+ * 1) If linkpath is relative and newdirfd is the special value AT_FDCWD, then
+ *    linkpath is interpreted relative to the current working directory.
+ * 2) If linkpath is absolute then newdirfd is ignored.
+ *
+ * On success, zero is returned.
+ * On error, -1 is returned, and errno is set to indicate the error.
+ */
+
+#ifdef _UNICODE
+#define _tsymlinkat _wsymlinkat
+#else
+#define _tsymlinkat symlinkat
+#endif
+
+int   symlinkat(const char *target, int newdirfd, const char *linkpath);
+int _wsymlinkat(const wchar_t *target, int newdirfd, const wchar_t *linkpath);
+
+
+
+/**
  * Creates a new link (also known as a hard link) named 'newpath' to an existing
  * file named 'oldpath'.
  *

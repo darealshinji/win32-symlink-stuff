@@ -1,10 +1,12 @@
-CFLAGS   = -Wall -Wextra -O3 -Iinclude -Isource
-CPPFLAGS = -DWIN32_LEAN_AND_MEAN
+CFLAGS    = -Wall -Wextra -O3 -Iinclude -Isource
+CFLAGS   += -Werror=implicit-function-declaration
+CPPFLAGS  = -DWIN32_LEAN_AND_MEAN
 #CPPFLAGS += -DUTF8_EVERYWHERE
-LDFLAGS  = -s
+LDFLAGS   = -s
 
 # ls -1 source/*.c source/posix/*.c | sed 's,^,\t,; s,\.c$,.o \\,'
 OBJS = \
+	source/common.o \
 	source/common_a.o \
 	source/common_w.o \
 	source/convert.o \

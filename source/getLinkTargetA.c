@@ -39,7 +39,7 @@
 static BOOL get_link_target_open_file(const char *path, LINK_TARGET *ltarget)
 {
 #ifdef UTF8_EVERYWHERE
-    return private_get_link_target_open_file(path, ltarget);
+    return _private_get_link_target_open_file(path, ltarget);
 #else
     wchar_t *wstr = convert_str_to_wcs(path);
 

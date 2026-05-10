@@ -28,37 +28,37 @@
 
 #include <wchar.h>
 typedef wchar_t  xchar_t;
-#define _T(x)    L##x  /* string literals */
-#define _w(x)   _w##x  /* prefix for C API functions */
-#define AW(x)    x##W  /* suffix for Windows API functions */
+#define _T(x)       L##x  /* string literals */
+#define _w(x)       _w##x  /* prefix for C API functions */
+#define AW(x)       x##W  /* suffix for Windows API functions */
 
 /* basically TCHAR API */
-#define xstrlen    wcslen
-#define xstrnlen_s wcsnlen_s
-#define xstrncmp   wcsncmp
-#define xstrncpy_s wcsncpy_s
-#define xisalpha   iswalpha
-#define _xstrdup   _wcsdup
-#define _xlstat64  _lwstat64
-#define _xstat64   _wstat64
-#define xmemcpy_s  wmemcpy_s
+#define xstrlen     wcslen
+#define xstrnlen_s  wcsnlen_s
+#define xstrncmp    wcsncmp
+#define xstrncpy_s  wcsncpy_s
+#define xisalpha    iswalpha
+#define _xstrdup    _wcsdup
+#define _xlstat64   _lwstat64
+#define _xstat64    _wstat64
+#define xmemcpy_s   wmemcpy_s
 
 #else
 
 typedef char xchar_t;
-#define _T(x)    x
-#define _w(x)    x
-#define AW(x)    x##A
+#define _T(x)       x
+#define _w(x)       _##x
+#define AW(x)       x##A
 
-#define xstrlen    strlen
-#define xstrnlen_s strnlen_s
-#define xstrncmp   strncmp
-#define xstrncpy_s strncpy_s
-#define xisalpha   isalpha
-#define _xstrdup   _strdup
-#define _xlstat64  _lstat64
-#define _xstat64   _stat64
-#define xmemcpy_s  memcpy_s
+#define xstrlen     strlen
+#define xstrnlen_s  strnlen_s
+#define xstrncmp    strncmp
+#define xstrncpy_s  strncpy_s
+#define xisalpha    isalpha
+#define _xstrdup    _strdup
+#define _xlstat64   _lstat64
+#define _xstat64    _stat64
+#define xmemcpy_s   memcpy_s
 
 #endif
 

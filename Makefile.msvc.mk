@@ -24,6 +24,7 @@ SRCS = \
 	posix/lstat.c \
 	posix/lstat64_a.c \
 	posix/lstat64_w.c \
+	posix/oldnames.c \
 	posix/readlink_a.c \
 	posix/readlink_w.c \
 	posix/readlinkat_a.c \

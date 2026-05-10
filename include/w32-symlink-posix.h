@@ -72,15 +72,20 @@ typedef int ssize_t;
 #endif
 
 
-#define AT_FDCWD            -100    /* Special value used to indicate the *at functions
-                                     * should use the current working directory. */
-#define AT_SYMLINK_FOLLOW   0x400   /* Follow symbolic links. */
+#define _AT_FDCWD               -100    /* Special value used to indicate the *at functions
+                                         * should use the current working directory. */
+#define _AT_SYMLINK_FOLLOW      0x400   /* Follow symbolic links. */
+
+#ifndef NO_OLDNAMES
+# define AT_FDCWD               _AT_FDCWD
+# define AT_SYMLINK_FOLLOW      _AT_SYMLINK_FOLLOW
+#endif
 
 
 /* https://learn.microsoft.com/en-us/windows/win32/fileio/maximum-file-path-limitation */
-#define MODERN_MAX_PATH     32767
+#define MODERN_MAX_PATH         32767
 #ifndef PATH_MAX
-#define PATH_MAX            MODERN_MAX_PATH
+#define PATH_MAX                MODERN_MAX_PATH
 #endif
 
 
@@ -103,11 +108,17 @@ typedef int ssize_t;
 #ifdef _UNICODE
 #define _tsymlink _wsymlink
 #else
-#define _tsymlink symlink
+#define _tsymlink _symlink
 #endif
 
-int   symlink(const char *target, const char *linkpath);
+int  _symlink(const char *target, const char *linkpath);
 int _wsymlink(const wchar_t *target, const wchar_t *linkpath);
+
+#ifndef NO_OLDNAMES
+inline int symlink(const char *target, const char *linkpath) {
+    return _symlink(target, linkpath);
+}
+#endif
 
 
 
@@ -130,11 +141,17 @@ int _wsymlink(const wchar_t *target, const wchar_t *linkpath);
 #ifdef _UNICODE
 #define _tsymlinkat _wsymlinkat
 #else
-#define _tsymlinkat symlinkat
+#define _tsymlinkat _symlinkat
 #endif
 
-int   symlinkat(const char *target, int newdirfd, const char *linkpath);
+int  _symlinkat(const char *target, int newdirfd, const char *linkpath);
 int _wsymlinkat(const wchar_t *target, int newdirfd, const wchar_t *linkpath);
+
+#ifndef NO_OLDNAMES
+inline int symlinkat(const char *target, int newdirfd, const char *linkpath) {
+    return _symlinkat(target, newdirfd, linkpath);
+}
+#endif
 
 
 
@@ -149,11 +166,17 @@ int _wsymlinkat(const wchar_t *target, int newdirfd, const wchar_t *linkpath);
 #ifdef _UNICODE
 #define _tlink _wlink
 #else
-#define _tlink link
+#define _tlink _link
 #endif
 
-int   link(const char *oldpath, const char *newpath);
+int  _link(const char *oldpath, const char *newpath);
 int _wlink(const wchar_t *oldpath, const wchar_t *newpath);
+
+#ifndef NO_OLDNAMES
+inline int link(const char *oldpath, const char *newpath) {
+    return _link(oldpath, newpath);
+}
+#endif
 
 
 
@@ -177,13 +200,20 @@ int _wlink(const wchar_t *oldpath, const wchar_t *newpath);
 #ifdef _UNICODE
 #define _tlinkat _wlinkat
 #else
-#define _tlinkat linkat
+#define _tlinkat _linkat
 #endif
 
-int   linkat(int olddirfd, const char *oldpath,
+int  _linkat(int olddirfd, const char *oldpath,
              int newdirfd, const char *newpath, int flags);
 int _wlinkat(int olddirfd, const wchar_t *oldpath,
              int newdirfd, const wchar_t *newpath, int flags);
+
+#ifndef NO_OLDNAMES
+inline int linkat(int olddirfd, const char *oldpath,
+                  int newdirfd, const char *newpath, int flags) {
+    return _linkat(olddirfd, oldpath, newdirfd, newpath, flags);
+}
+#endif
 
 
 
@@ -200,14 +230,19 @@ int _wlinkat(int olddirfd, const wchar_t *oldpath,
 #ifdef _UNICODE
 #define _treadlink _wreadlink
 #else
-#define _treadlink readlink
+#define _treadlink _readlink
 #endif
 
-__DEPRECATED /* use readlink_s instead! */ ssize_t readlink(
+__DEPRECATED /* use _readlink_s instead! */ ssize_t _readlink(
     const char *path, char *buf, size_t bufsize);
 
 __DEPRECATED /* use _wreadlink_s instead! */ ssize_t _wreadlink(
     const wchar_t *path, wchar_t *buf, size_t numwcs);
+
+#ifndef NO_OLDNAMES
+__DEPRECATED /* use readlink_s instead! */ ssize_t readlink(
+    const char *path, char *buf, size_t bufsize);
+#endif
 
 
 
@@ -225,11 +260,17 @@ __DEPRECATED /* use _wreadlink_s instead! */ ssize_t _wreadlink(
 #ifdef _UNICODE
 #define _treadlink_s _wreadlink_s
 #else
-#define _treadlink_s readlink_s
+#define _treadlink_s _readlink_s
 #endif
 
-char      *readlink_s(const char *path, char *buf, size_t bufsize);
+char     *_readlink_s(const char *path, char *buf, size_t bufsize);
 wchar_t *_wreadlink_s(const wchar_t *path, wchar_t *buf, size_t numwcs);
+
+#ifndef NO_OLDNAMES
+inline char *readlink_s(const char *path, char *buf, size_t bufsize) {
+    return _readlink_s(path, buf, bufsize);
+}
+#endif
 
 
 
@@ -254,13 +295,18 @@ wchar_t *_wreadlink_s(const wchar_t *path, wchar_t *buf, size_t numwcs);
 #ifdef _UNICODE
 #define _treadlinkat _wreadlinkat
 #else
-#define _treadlinkat readlinkat
+#define _treadlinkat _readlinkat
 #endif
-__DEPRECATED /* use readlinkat_s instead! */ ssize_t readlinkat(
+__DEPRECATED /* use _readlinkat_s instead! */ ssize_t _readlinkat(
     int dirfd, const char *path, char *buf, size_t bufsize);
 
 __DEPRECATED /* use _wreadlinkat_s instead! */ ssize_t _wreadlinkat(
     int dirfd, const wchar_t *path, wchar_t *buf, size_t numcs);
+
+#ifndef NO_OLDNAMES
+__DEPRECATED /* use readlinkat_s instead! */ ssize_t readlinkat(
+    int dirfd, const char *path, char *buf, size_t bufsize);
+#endif
 
 
 
@@ -286,10 +332,16 @@ __DEPRECATED /* use _wreadlinkat_s instead! */ ssize_t _wreadlinkat(
 #ifdef _UNICODE
 #define _treadlinkat_s _wreadlinkat_s
 #else
-#define _treadlinkat_s readlinkat_s
+#define _treadlinkat_s _readlinkat_s
 #endif
-char     *readlinkat_s(int dirfd, const char *path, char *buf, size_t bufsize);
+char     *_readlinkat_s(int dirfd, const char *path, char *buf, size_t bufsize);
 wchar_t *_wreadlinkat_s(int dirfd, const wchar_t *path, wchar_t *buf, size_t numcs);
+
+#ifndef NO_OLDNAMES
+inline char *readlinkat_s(int dirfd, const char *path, char *buf, size_t bufsize) {
+    return _readlinkat_s(dirfd, path, buf, bufsize);
+}
+#endif
 
 
 
@@ -309,14 +361,19 @@ wchar_t *_wreadlinkat_s(int dirfd, const wchar_t *path, wchar_t *buf, size_t num
 #ifdef _UNICODE
 #define _trealpath _wrealpath
 #else
-#define _trealpath realpath
+#define _trealpath _realpath
 #endif
 
-__DEPRECATED /* use realpath_s instead! */ char *realpath(
+__DEPRECATED /* use _realpath_s instead! */ char *_realpath(
     const char *path, char *resolved_path);
 
 __DEPRECATED /* use _wrealpath_s instead! */ wchar_t *_wrealpath(
     const wchar_t *path, wchar_t *resolved_path);
+
+#ifndef NO_OLDNAMES
+__DEPRECATED /* use realpath_s instead! */ char *realpath(
+    const char *path, char *resolved_path);
+#endif
 
 
 
@@ -336,11 +393,17 @@ __DEPRECATED /* use _wrealpath_s instead! */ wchar_t *_wrealpath(
 #ifdef _UNICODE
 #define _trealpath_s _wrealpath_s
 #else
-#define _trealpath_s realpath_s
+#define _trealpath_s _realpath_s
 #endif
 
-char      *realpath_s(const char *path, char *buf, size_t bufsize);
+char     *_realpath_s(const char *path, char *buf, size_t bufsize);
 wchar_t *_wrealpath_s(const wchar_t *path, wchar_t *buf, size_t numwcs);
+
+#ifndef NO_OLDNAMES
+inline char *realpath_s(const char *path, char *buf, size_t bufsize) {
+    return _realpath_s(path, buf, bufsize);
+}
+#endif
 
 
 
@@ -357,11 +420,22 @@ wchar_t *_wrealpath_s(const wchar_t *path, wchar_t *buf, size_t numwcs);
 #ifdef _UNICODE
 #define _tcanonicalize_file_name _wcanonicalize_file_name
 #else
-#define _tcanonicalize_file_name canonicalize_file_name
+#define _tcanonicalize_file_name _canonicalize_file_name
 #endif
 
-char      *canonicalize_file_name(const char *path);
-wchar_t *_wcanonicalize_file_name(const wchar_t *path);
+inline char *_canonicalize_file_name(const char *path) {
+    return _realpath_s(path, NULL, 0);
+}
+
+inline wchar_t *_wcanonicalize_file_name(const wchar_t *path) {
+    return _wrealpath_s(path, NULL, 0);
+}
+
+#ifndef NO_OLDNAMES
+inline char *canonicalize_file_name(const char *path) {
+    return _canonicalize_file_name(path);
+}
+#endif
 
 
 
@@ -372,23 +446,26 @@ wchar_t *_wcanonicalize_file_name(const wchar_t *path);
  */
 
 #ifdef _UNICODE
-#define _ltstat      _lwstat
-#define _ltstat32    _lwstat32
-#define _ltstat64    _lwstat64
-#define _ltstati64   _lwstati64
-#define _ltstat32i64 _lwstat32i64
-#define _ltstat64i32 _lwstat64i32
-#define  ltstat       lwstat
-#define  ltstat64     lwstat64
+# define _ltstat        _lwstat
+# define _ltstat32      _lwstat32
+# define _ltstat64      _lwstat64
+# define _ltstati64     _lwstati64
+# define _ltstat32i64   _lwstat32i64
+# define _ltstat64i32   _lwstat64i32
 #else
-#define _ltstat      _lstat
-#define _ltstat32    _lstat32
-#define _ltstat64    _lstat64
-#define _ltstati64   _lstati64
-#define _ltstat32i64 _lstat32i64
-#define _ltstat64i32 _lstat64i32
-#define  ltstat       lstat
-#define  ltstat64     lstat64
+# define _ltstat        _lstat
+# define _ltstat32      _lstat32
+# define _ltstat64      _lstat64
+# define _ltstati64     _lstati64
+# define _ltstat32i64   _lstat32i64
+# define _ltstat64i32   _lstat64i32
+#endif
+#ifndef NO_OLDNAMES
+# ifdef _UNICODE
+#  define ltstat         lwstat
+# else
+#  define ltstat         lstat
+# endif
 #endif
 
 int _lstat(const char *path, struct _stat *buffer);
@@ -405,14 +482,10 @@ int _lwstati64(const wchar_t *path, struct _stati64 *buffer);
 int _lwstat32i64(const wchar_t *path, struct _stat32i64 *buffer);
 int _lwstat64i32(const wchar_t *path, struct _stat64i32 *buffer);
 
+#ifndef NO_OLDNAMES
 int lstat(const char *path, struct stat *buffer);
 int lwstat(const wchar_t *path, struct stat *buffer);
-
-#ifndef stat64
-#define stat64 _stat64
 #endif
-int lstat64(const char *path, struct stat64 *buffer);
-int lwstat64(const wchar_t *path, struct stat64 *buffer);
 
 
 #undef __DEPRECATED

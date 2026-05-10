@@ -1,7 +1,7 @@
 /**
  * The MIT License (MIT)
  *
- * Copyright (C) 2023-2026 Carsten Janssen
+ * Copyright (C) 2026 Carsten Janssen
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -21,56 +21,45 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE
  */
-#undef _UNICODE
-#undef UNICODE
+#ifndef NO_OLDNAMES
+
+/**
+ * Build implementations of deprecated function names
+ * without causing compiler warnings.
+ */
+
 #include <windows.h>
-#include <errno.h>
-#include <wchar.h>
-#include <limits.h>
-#include <stdlib.h>
-#include "w32-symlink.h"
-#include "w32-symlink-posix.h"
-#include "common.h"
-#include "helper.h"
+#include <sys/types.h>
+
+/* typedef for ssize_t */
+#ifndef _SSIZE_T_DEFINED
+#define _SSIZE_T_DEFINED
+#undef ssize_t
+#ifdef _WIN64
+typedef __int64 ssize_t;
+#else
+typedef int ssize_t;
+#endif /* _WIN64 */
+#endif /* _SSIZE_T_DEFINED */
 
 
-xchar_t *_w(realpath_s)(const xchar_t *path, xchar_t *buf, size_t numcs)
-{
-    xchar_t *ptr;
+/* prototypes */
+ssize_t _readlink(const char *path, char *buf, size_t bufsize);
+ssize_t _readlinkat(int dirfd, const char *path, char *buf, size_t bufsize);
+char *_realpath(const char *path, char *resolved_path);
 
-    if (!path || !*path || (buf && numcs == 0)) {
-        errno = EINVAL; /* Invalid argument */
-        return NULL;
-    }
 
-    ptr = AW(getCanonicalPath)(path);
-
-    return _w(private_return_path)(ptr, buf, numcs);
+/* deprecated functions */
+ssize_t readlink(const char *path, char *buf, size_t bufsize) {
+    return _readlink(path, buf, bufsize);
 }
 
-
-xchar_t *_w(realpath)(const xchar_t *path, xchar_t *resolved_path)
-{
-    xchar_t buf[PATH_MAX];
-    xchar_t *ptr;
-    size_t len;
-
-    ptr = _w(realpath_s)(path, buf, PATH_MAX);
-
-    if (!ptr) {
-        /* error (including truncation from exceeding PATH_MAX) */
-        return NULL;
-    }
-
-    if (!resolved_path) {
-        /* return allocated copy */
-        return _xstrdup(buf);
-    }
-
-    len = xstrlen(buf);
-    xmemcpy_s(resolved_path, PATH_MAX, buf, len);
-    resolved_path[len] = 0;
-
-    return resolved_path;
+ssize_t readlinkat(int dirfd, const char *path, char *buf, size_t bufsize) {
+    return _readlinkat(dirfd, path, buf, bufsize);
 }
 
+char *realpath(const char *path, char *resolved_path) {
+    return _realpath(path, resolved_path);
+}
+
+#endif /* !NO_OLDNAMES */

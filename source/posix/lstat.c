@@ -64,19 +64,11 @@
         return rv; \
     }
 
+
 IMPLEMENT_LSTAT ( lstat,       lwstat,       stat,        time_t,    _off_t)
 IMPLEMENT_LSTAT (_lstat,      _lwstat,      _stat,        time_t,    _off_t)
 IMPLEMENT_LSTAT (_lstat32,    _lwstat32,    _stat32,    __time32_t,  _off_t)
 IMPLEMENT_LSTAT (_lstati64,   _lwstati64,   _stati64,     time_t,   __int64)
 IMPLEMENT_LSTAT (_lstat32i64, _lwstat32i64, _stat32i64, __time32_t, __int64)
 IMPLEMENT_LSTAT (_lstat64i32, _lwstat64i32, _stat64i32, __time64_t,  _off_t)
-
-
-int lstat64(const char *path, struct stat64 *buffer) {
-    return _lstat64(path, buffer);
-}
-
-int lwstat64(const wchar_t *path, struct stat64 *buffer) {
-    return _lwstat64(path, buffer);
-}
 

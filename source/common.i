@@ -136,21 +136,37 @@ BOOL _w(private_get_link_target_open_file)(const xchar_t *path, LINK_TARGET *lta
 }
 
 
-int _w(private_create_path_from_dirfd)(int dirfd, xchar_t *buf, const size_t buflen, const xchar_t *addpath)
+BOOL _w(private_create_path_from_dirfd)(int dirfd, xchar_t *buf, const size_t buflen, const xchar_t *addpath)
 {
     const DWORD dwFlags = FILE_NAME_NORMALIZED | VOLUME_NAME_DOS;
+    BY_HANDLE_FILE_INFORMATION info;
     HANDLE hFile;
     DWORD len;
     xchar_t *sub;
     size_t sublen, linklen;
 
-    /* get handle from fd value; don't use CloseHandle() on the returned hFile! */
+    /* get handle from fd value; don't use CloseHandle() on it! */
     hFile = (HANDLE)_get_osfhandle(dirfd);
 
-    if (hFile == INVALID_HANDLE_VALUE ||
-        private_handle_is_directory(hFile) == FALSE)
-    {
+    if (hFile == INVALID_HANDLE_VALUE) {
         /* errno was already set correctly */
+        return FALSE;
+    }
+
+    /* retrieve file attributes */
+    if (GetFileInformationByHandle(hFile, &info) == FALSE) {
+        errno = private_map_winerr_to_errno(GetLastError());
+        return FALSE;
+    }
+
+    if (info.dwFileAttributes == INVALID_FILE_ATTRIBUTES) {
+        errno = ENODATA;
+        return FALSE;
+    }
+
+    /* check if newdirfd represents a directory */
+    if (!(info.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY)) {
+        errno = ENOTDIR;
         return FALSE;
     }
 

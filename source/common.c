@@ -85,6 +85,9 @@ int private_map_winerr_to_errno(DWORD dwErr)
     case ERROR_DIR_NOT_EMPTY:
         return ENOTEMPTY;
 
+    case ERROR_NOT_SUPPORTED:
+        return ENOTSUP;
+
     case ERROR_BUFFER_OVERFLOW:
         return EOVERFLOW;
 

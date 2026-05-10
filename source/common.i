@@ -136,63 +136,67 @@ BOOL _w(private_get_link_target_open_file)(const xchar_t *path, LINK_TARGET *lta
 }
 
 
-BOOL _w(private_create_path_from_dirfd)(int dirfd, xchar_t *buf, const size_t buflen, const xchar_t *addpath)
+xchar_t *_w(private_create_path_from_dirfd)(int dirfd, const xchar_t *addpath)
 {
-    const DWORD dwFlags = FILE_NAME_NORMALIZED | VOLUME_NAME_DOS;
     BY_HANDLE_FILE_INFORMATION info;
     HANDLE hFile;
     DWORD len;
-    xchar_t *sub;
-    size_t sublen, linklen;
+    xchar_t *buf;
+    size_t addlen, buflen;
+    int errsav;
+
+    const DWORD flags =
+        FILE_NAME_NORMALIZED | /* Normalize the path. -> This is what we want! */
+        VOLUME_NAME_DOS;       /* Return path with drive letter (uses "\\?\" syntax). */
 
     /* get handle from fd value; don't use CloseHandle() on it! */
     hFile = (HANDLE)_get_osfhandle(dirfd);
 
     if (hFile == INVALID_HANDLE_VALUE) {
         /* errno was already set correctly */
-        return FALSE;
+        return NULL;
     }
 
     /* retrieve file attributes */
-    if (GetFileInformationByHandle(hFile, &info) == FALSE) {
+    if (GetFileInformationByHandle(hFile, &info) != TRUE) {
         errno = private_map_winerr_to_errno(GetLastError());
-        return FALSE;
+        return NULL;
     }
 
     if (info.dwFileAttributes == INVALID_FILE_ATTRIBUTES) {
         errno = ENODATA;
-        return FALSE;
+        return NULL;
     }
 
-    /* check if newdirfd represents a directory */
+    /* check if dirfd represents a directory */
     if (!(info.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY)) {
         errno = ENOTDIR;
-        return FALSE;
+        return NULL;
+    }
+
+    /* get the path name length */
+    if ((len = AW(GetFinalPathNameByHandle)(hFile, NULL, 0, flags)) == 0) {
+        errno = private_map_winerr_to_errno(GetLastError());
+        return NULL;
+    }
+
+    addlen = xstrlen(addpath);
+    buflen = len + addlen + 2; /* buf + '/' + addpath + '\0' */
+
+    if ((buf = malloc(buflen * sizeof(xchar_t))) == NULL) {
+        return NULL;
     }
 
     /* retrieve the path name from hFile */
-    len = AW(GetFinalPathNameByHandle)(hFile, buf, buflen, dwFlags);
-
-    if (len == 0) {
-        errno = private_map_winerr_to_errno(GetLastError());
-        return FALSE;
-    } else if (len == buflen) {
-        errno = ENOMEM; /* Not enough space/cannot allocate memory */
-        return FALSE;
-    }
-
-    /* buf + '/' + addpath + '\0' */
-    linklen = xstrlen(addpath);
-
-    if ((len + linklen + 2) > buflen) {
-        errno = ENOMEM; /* Not enough space/cannot allocate memory */
-        return FALSE;
+    if (AW(GetFinalPathNameByHandle)(hFile, buf, buflen, flags) != len) {
+        errsav = private_map_winerr_to_errno(GetLastError());
+        free(buf);
+        errno = errsav;
+        return NULL;
     }
 
     buf[len] = _T('\\');  /* append path separator */
-    sub = buf + len + 1;  /* get sub-buffer */
-    sublen = buflen - (len + 1);
-    xmemcpy_s(sub, sublen, addpath, linklen + 1);  /* append addpath + NUL */
+    xmemcpy_s(buf + (len+1), buflen - (len+1), addpath, addlen + 1);  /* append addpath + NUL */
 
-    return TRUE;
+    return buf;
 }

@@ -19,6 +19,8 @@ SRCS = \
 	isSymlinkW.c \
 	posix/link_a.c \
 	posix/link_w.c \
+	posix/linkat_a.c \
+	posix/linkat_w.c \
 	posix/lstat.c \
 	posix/lstat64_a.c \
 	posix/lstat64_w.c \

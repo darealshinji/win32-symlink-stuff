@@ -50,7 +50,7 @@ BOOL private_get_link_target_from_handle(HANDLE handle, LINK_TARGET *ltarget);
 BOOL   private_get_link_target_open_file(const char *path, LINK_TARGET *ltarget);
 BOOL _wprivate_get_link_target_open_file(const wchar_t *path, LINK_TARGET *ltarget);
 
-BOOL   private_create_path_from_dirfd(int dirfd, char *buf, const size_t buflen, const char *addpath);
-BOOL _wprivate_create_path_from_dirfd(int dirfd, wchar_t *buf, const size_t buflen, const wchar_t *addpath);
+char      *private_create_path_from_dirfd(int dirfd, const char *addpath);
+wchar_t *_wprivate_create_path_from_dirfd(int dirfd, const wchar_t *addpath);
 
 #endif /* COMMON_H_INCLUDED */

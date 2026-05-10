@@ -20,6 +20,8 @@ OBJS = \
 	source/isSymlinkW.o \
 	source/posix/link_a.o \
 	source/posix/link_w.o \
+	source/posix/linkat_a.o \
+	source/posix/linkat_w.o \
 	source/posix/lstat.o \
 	source/posix/lstat64_a.o \
 	source/posix/lstat64_w.o \

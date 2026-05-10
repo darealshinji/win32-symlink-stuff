@@ -33,7 +33,8 @@
 
 int _w(symlinkat)(const xchar_t *target, int newdirfd, const xchar_t *linkpath)
 {
-    xchar_t buffer[MODERN_MAX_PATH];
+    xchar_t *buf_linkpath = NULL;
+    int ret, errsav;
 
     if (!target || !*target || !linkpath || !*linkpath) {
         errno = EINVAL; /* Invalid argument */
@@ -47,11 +48,20 @@ int _w(symlinkat)(const xchar_t *target, int newdirfd, const xchar_t *linkpath)
     }
 
     /* create full path; fails if newdirfd doesn't belong to a directory */
-    if (_w(private_create_path_from_dirfd)(newdirfd, buffer, _countof(buffer), linkpath) == FALSE) {
+    buf_linkpath = _w(private_create_path_from_dirfd)(newdirfd, linkpath);
+
+    if (!buf_linkpath) {
+        /* errno is set */
         return -1;
     }
 
     /* call symlink() */
-    return _w(symlink)(target, buffer);
+    ret = _w(symlink)(target, buf_linkpath);
+
+    errsav = errno;
+    free(buf_linkpath);
+    errno = errsav;
+
+    return ret;
 }
 

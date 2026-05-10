@@ -72,15 +72,15 @@ typedef int ssize_t;
 #endif
 
 
-/* used by symlinkat(): linkpath is interpreted relative to the current
- * working directory (like symlink()) */
-#define AT_FDCWD -100
+#define AT_FDCWD            -100    /* Special value used to indicate the *at functions
+                                     * should use the current working directory. */
+#define AT_SYMLINK_FOLLOW   0x400   /* Follow symbolic links. */
 
 
 /* https://learn.microsoft.com/en-us/windows/win32/fileio/maximum-file-path-limitation */
-#define MODERN_MAX_PATH 32767
+#define MODERN_MAX_PATH     32767
 #ifndef PATH_MAX
-#define PATH_MAX MODERN_MAX_PATH
+#define PATH_MAX            MODERN_MAX_PATH
 #endif
 
 
@@ -227,10 +227,13 @@ int _wsymlink(const wchar_t *target, const wchar_t *linkpath);
  * Creates a symbolic link named 'linkpath' pointing to the target named 'target'
  * relative to the directory referred to by the file descriptor newdirfd.
  *
- * The behavior is identical to symlink() in these two cases:
- * 1) If linkpath is relative and newdirfd is the special value AT_FDCWD, then
- *    linkpath is interpreted relative to the current working directory.
- * 2) If linkpath is absolute then newdirfd is ignored.
+ * If linkpath is relative then linkpath is interpreted relative to the directory
+ * referred to by newdirfd.
+ *
+ * If linkpath is relative and newdirfd is the special value AT_FDCDW, then
+ * linkpath is interpreted relative to the current working directory.
+ *
+ * If linkpath is absolute then newdirfd is ignored.
  *
  * On success, zero is returned.
  * On error, -1 is returned, and errno is set to indicate the error.
@@ -263,6 +266,36 @@ int _wsymlinkat(const wchar_t *target, int newdirfd, const wchar_t *linkpath);
 
 int   link(const char *oldpath, const char *newpath);
 int _wlink(const wchar_t *oldpath, const wchar_t *newpath);
+
+
+
+/**
+ * Creates a new link (also known as a hard link) named 'newpath' to an existing
+ * file named 'oldpath'.
+ *
+ * If oldpath is relative it is interpreted relative to the directory referred
+ * to by the file descriptor olddirfd.
+ *
+ * If oldpath is relative and olddirfd is the special value AT_FDCWD, then
+ * oldpath is interpreted relative to the current working directory.
+ *
+ * If oldpath is absolute, then olddirfd is ignored.
+ * The parameters newdirfd and newpath are handled the same way.
+ *
+ * On success, zero is returned.
+ * On error, -1 is returned, and errno is set to indicate the error.
+ */
+
+#ifdef _UNICODE
+#define _tlinkat _wlinkat
+#else
+#define _tlinkat linkat
+#endif
+
+int   linkat(int olddirfd, const char *oldpath,
+             int newdirfd, const char *newpath, int flags);
+int _wlinkat(int olddirfd, const wchar_t *oldpath,
+             int newdirfd, const wchar_t *newpath, int flags);
 
 
 

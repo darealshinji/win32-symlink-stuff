@@ -27,6 +27,8 @@ OBJS = \
 	source/posix/lstat64_w.o \
 	source/posix/readlink_a.o \
 	source/posix/readlink_w.o \
+	source/posix/readlinkat_a.o \
+	source/posix/readlinkat_w.o \
 	source/posix/realpath_a.o \
 	source/posix/realpath_w.o \
 	source/posix/symlink_a.o \

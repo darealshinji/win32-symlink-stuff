@@ -1,7 +1,7 @@
 /**
  * The MIT License (MIT)
  *
- * Copyright (C) 2023-2026 Carsten Janssen
+ * Copyright (C) 2026 Carsten Janssen
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -24,18 +24,18 @@
 #undef _UNICODE
 #undef UNICODE
 #include <windows.h>
-#include <errno.h>
 #include <wchar.h>
-#include <limits.h>
+#include <errno.h>
 #include <stdlib.h>
 #include "w32-symlink.h"
 #include "common.h"
 #include "helper.h"
 
 
-ssize_t _w(readlink)(const xchar_t *path, xchar_t *buf, size_t numcs)
+ssize_t _w(readlinkat)(int dirfd, const xchar_t *path, xchar_t *buf, size_t numcs)
 {
-    xchar_t *ptr;
+    xchar_t *buf_path, *ptr;
+    int errsav;
 
     if (!path || !*path || !buf || numcs == 0) {
         errno = EINVAL; /* Invalid argument */
@@ -46,23 +46,62 @@ ssize_t _w(readlink)(const xchar_t *path, xchar_t *buf, size_t numcs)
         numcs = SSIZE_MAX;
     }
 
-    ptr = _w(readlink_s)(path, buf, numcs);
+    /* if special value AT_FDCWD is used the behavior is exactly like readlink() */
+    if (dirfd == AT_FDCWD || _w(private_is_absolute_path)(path)) {
+        ptr = _w(readlink_s)(path, buf, numcs);
+
+        return ptr ? (ssize_t)xstrlen(buf) : -1;
+    }
+
+    /* create full path; fails if dirfd doesn't belong to a directory */
+    buf_path = _w(private_create_path_from_dirfd)(dirfd, path);
+
+    if (!buf_path) {
+        /* errno is set */
+        return -1;
+    }
+
+    /* call readlink_s() */
+    ptr = _w(readlink_s)(buf_path, buf, numcs);
+
+    errsav = errno;
+    free(buf_path);
+    errno = errsav;
 
     return ptr ? (ssize_t)xstrlen(buf) : -1;
 }
 
 
-xchar_t *_w(readlink_s)(const xchar_t *path, xchar_t *buf, size_t numcs)
+xchar_t *_w(readlinkat_s)(int dirfd, const xchar_t *path, xchar_t *buf, size_t numcs)
 {
-    xchar_t *ptr;
+    xchar_t *buf_path, *ptr;
+    int errsav;
 
     if (!path || !*path || (buf && numcs == 0)) {
         errno = EINVAL; /* Invalid argument */
         return NULL;
     }
 
-    ptr = AW(getLinkTarget)(path, NULL);
+    /* if special value AT_FDCWD is used the behavior is exactly like readlink_s() */
+    if (dirfd == AT_FDCWD || _w(private_is_absolute_path)(path)) {
+        return _w(readlink_s)(path, buf, numcs);
+    }
 
-    return _w(private_return_path)(ptr, buf, numcs);
+    /* create full path; fails if dirfd doesn't belong to a directory */
+    buf_path = _w(private_create_path_from_dirfd)(dirfd, path);
+
+    if (!buf_path) {
+        /* errno is set */
+        return NULL;
+    }
+
+    /* call readlink_s() */
+    ptr = _w(readlink_s)(buf_path, buf, numcs);
+
+    errsav = errno;
+    free(buf_path);
+    errno = errsav;
+
+    return ptr;
 }
 

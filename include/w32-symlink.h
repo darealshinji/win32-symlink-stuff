@@ -324,6 +324,22 @@ __DEPRECATED /* use _wreadlink_s instead! */ ssize_t _wreadlink(
 
 
 /**
+ * TODO
+ */
+#ifdef _UNICODE
+#define _treadlinkat _wreadlinkat
+#else
+#define _treadlinkat readlinkat
+#endif
+__DEPRECATED /* use readlinkat_s instead! */ ssize_t readlinkat(
+    int dirfd, const char *path, char *buf, size_t bufsize);
+
+__DEPRECATED /* use _wreadlinkat_s instead! */ ssize_t _wreadlinkat(
+    int dirfd, const wchar_t *path, wchar_t *buf, size_t numcs);
+
+
+
+/**
  * Read the value of the link 'path' and save it into the buffer 'buf'.
  *
  * If 'buf' is NULL, 'bufsize/numwcs' is ignored and an allocated string
@@ -342,6 +358,19 @@ __DEPRECATED /* use _wreadlink_s instead! */ ssize_t _wreadlink(
 
 char      *readlink_s(const char *path, char *buf, size_t bufsize);
 wchar_t *_wreadlink_s(const wchar_t *path, wchar_t *buf, size_t numwcs);
+
+
+
+/**
+ * TODO
+ */
+#ifdef _UNICODE
+#define _treadlinkat_s _wreadlinkat_s
+#else
+#define _treadlinkat_s readlinkat_s
+#endif
+char     *readlinkat_s(int dirfd, const char *path, char *buf, size_t bufsize);
+wchar_t *_wreadlinkat_s(int dirfd, const wchar_t *path, wchar_t *buf, size_t numcs);
 
 
 

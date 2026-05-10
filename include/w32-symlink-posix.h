@@ -81,11 +81,8 @@ typedef int ssize_t;
 # define AT_SYMLINK_FOLLOW      _AT_SYMLINK_FOLLOW
 #endif
 
-
-/* https://learn.microsoft.com/en-us/windows/win32/fileio/maximum-file-path-limitation */
-#define MODERN_MAX_PATH         32767
 #ifndef PATH_MAX
-#define PATH_MAX                MODERN_MAX_PATH
+#define PATH_MAX                MAX_PATH
 #endif
 
 

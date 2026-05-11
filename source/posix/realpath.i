@@ -33,6 +33,11 @@
 #include "common.h"
 #include "helper.h"
 
+#ifndef PATH_MAX
+#define PATH_MAX MAX_PATH /* 260 characters */
+#endif
+
+
 
 xchar_t *_w(realpath)(const xchar_t *path, xchar_t *resolved_path)
 {

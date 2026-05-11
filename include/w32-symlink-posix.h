@@ -81,10 +81,6 @@ typedef int ssize_t;
 # define AT_SYMLINK_FOLLOW      _AT_SYMLINK_FOLLOW
 #endif
 
-#ifndef PATH_MAX
-#define PATH_MAX                MAX_PATH /* 260 characters */
-#endif
-
 
 
 /**
@@ -385,7 +381,8 @@ __DEPRECATED /* use canonicalize_file_name instead! */ char *realpath(
  * Get the canonicalized absolute pathname of 'path'. This string must later
  * be deallocated with 'free()'.
  *
- * This function is identical to a call to _trealpath(path, NULL, 0).
+ * This function is identical to a call to _trealpath(path, NULL, 0), except
+ * the returned path isn't limited to PATH_MAX size characters.
  *
  * On success an allocated string is returned.
  * On error, NULL is returned and errno is set to indicate the error.

@@ -28,22 +28,36 @@
 #include <errno.h>
 #include <stdlib.h>
 #include "w32-symlink.h"
+#include "w32-symlink-posix.h"
 #include "common.h"
 #include "convert.h"
 #include "helper.h"
 
 
-static BOOL target_is_directory(const xchar_t *target);
-
-
-#if defined(UTF8_EVERYWHERE) || defined(WIDE_CHAR_API)
 static BOOL target_is_directory(const xchar_t *target)
 {
-    DWORD dwAttr = AW(GetFileAttributes)(target);
+    DWORD dwAttr;
+    wchar_t *wcs_target;
+
+#if defined(UTF8_EVERYWHERE) || defined(WIDE_CHAR_API)
+
+    dwAttr = AW(GetFileAttributes)(target);
+    (void)wcs_target;
+
+#else
+
+    /* convert string to wchar_t */
+    if ((wcs_target = convert_str_to_wcs(target)) == NULL) {
+        return FALSE;
+    }
+
+    dwAttr = GetFileAttributesW(wcs_target);
+    free(wcs_target);
+
+#endif
 
     return (dwAttr != INVALID_FILE_ATTRIBUTES && (dwAttr & FILE_ATTRIBUTE_DIRECTORY));
 }
-#endif
 
 
 int _w(symlink)(const xchar_t *target, const xchar_t *linkpath)
@@ -65,5 +79,40 @@ int _w(symlink)(const xchar_t *target, const xchar_t *linkpath)
     }
 
     return 0;
+}
+
+
+int _w(symlinkat)(const xchar_t *target, int newdirfd, const xchar_t *linkpath)
+{
+    xchar_t *buf_linkpath = NULL;
+    int ret, errsav;
+
+    if (!target || !*target || !linkpath || !*linkpath) {
+        errno = EINVAL; /* Invalid argument */
+        return -1;
+    }
+
+    /* if special value _AT_FDCWD is used or the link path is absolute,
+     * the behavior is exactly like symlink() */
+    if (newdirfd == _AT_FDCWD || _w(private_is_absolute_path)(linkpath)) {
+        return _w(symlink)(target, linkpath);
+    }
+
+    /* create full path; fails if newdirfd doesn't belong to a directory */
+    buf_linkpath = _w(private_create_path_from_dirfd)(newdirfd, linkpath);
+
+    if (!buf_linkpath) {
+        /* errno is set */
+        return -1;
+    }
+
+    /* call symlink() */
+    ret = _w(symlink)(target, buf_linkpath);
+
+    errsav = errno;
+    free(buf_linkpath);
+    errno = errsav;
+
+    return ret;
 }
 

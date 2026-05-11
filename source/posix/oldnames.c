@@ -24,8 +24,8 @@
 #ifndef NO_OLDNAMES
 
 /**
- * Build implementations of deprecated function names
- * without causing compiler warnings.
+ * Build implementations of deprecated function names without preceeding
+ * underscore and without causing compiler warnings.
  */
 
 #include <windows.h>

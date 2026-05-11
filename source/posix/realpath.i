@@ -53,7 +53,7 @@ xchar_t *_w(realpath)(const xchar_t *path, xchar_t *resolved_path)
 
     len = xstrlen(ptr);
 
-    if (len > (PATH_MAX-1)) {
+    if (len >= PATH_MAX) {
         /* pathname exceeded PATH_MAX (including terminating NUL character) */
         free(ptr);
         errno = ENAMETOOLONG;

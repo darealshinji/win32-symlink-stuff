@@ -51,7 +51,7 @@ static ssize_t xreadlink(const xchar_t *path, xchar_t *buf, size_t numcs)
     rv = xstrncpy_s(buf, numcs, ptr, _TRUNCATE);
     free(ptr);
 
-    /* truncate silently */
+    /* truncate silently (as specified in man page) */
     if (rv == 0 || rv == STRUNCATE) {
         return (ssize_t)xstrlen(buf);
     }
@@ -70,8 +70,8 @@ ssize_t _w(readlink)(const xchar_t *path, xchar_t *buf, size_t numcs)
         return -1;
     }
 
-    /* how to handle numcs if it exceeds
-     * SSIZE_MAX is implementation defined */
+    /* how to handle numcs if it exceeds SSIZE_MAX is implementation defined;
+     * let's just silently cap numcs at SSIZE_MAX */
     if (numcs > SSIZE_MAX) {
         numcs = SSIZE_MAX;
     }
@@ -120,7 +120,6 @@ xchar_t *_w(readlink_s)(const xchar_t *path, xchar_t *buf, size_t numcs)
 
     return buf;
 }
-
 
 
 ssize_t _w(readlinkat)(int dirfd, const xchar_t *path, xchar_t *buf, size_t numcs)

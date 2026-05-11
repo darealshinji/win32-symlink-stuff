@@ -24,9 +24,10 @@
 #undef _UNICODE
 #undef UNICODE
 #include <windows.h>
-#include <errno.h>
 #include <wchar.h>
+#include <errno.h>
 #include "w32-symlink.h"
+#include "w32-symlink-posix.h"
 #include "common.h"
 #include "helper.h"
 
@@ -45,3 +46,76 @@ int _w(link)(const xchar_t *oldpath, const xchar_t *newpath)
 
     return 0;
 }
+
+
+int _w(linkat)(int olddirfd, const xchar_t *oldpath,
+               int newdirfd, const xchar_t *newpath, int flags)
+{
+    const xchar_t *ptr_oldpath = NULL;
+    const xchar_t *ptr_newpath = NULL;
+    xchar_t *buf_oldpath = NULL;
+    xchar_t *buf_newpath = NULL;
+    xchar_t *resolved = NULL;
+    int errsav;
+    int ret = -1;
+
+    if (!oldpath || !*oldpath || !newpath || !*newpath) {
+        errno = EINVAL; /* Invalid argument */
+        return -1;
+    }
+
+    /* if special value _AT_FDCWD is used or the path is absolute,
+     * the behavior is exactly like link() */
+    if (olddirfd == _AT_FDCWD || _w(private_is_absolute_path)(oldpath)) {
+        ptr_oldpath = oldpath;
+    } else {
+        /* create full path; fails if file descriptor doesn't belong to a directory */
+        ptr_oldpath = buf_oldpath = _w(private_create_path_from_dirfd)(olddirfd, oldpath);
+
+        if (!buf_oldpath) {
+            /* errno was set */
+            goto JUMP_CLEANUP;
+        }
+    }
+
+    if (newdirfd == _AT_FDCWD || _w(private_is_absolute_path)(newpath)) {
+        ptr_newpath = newpath;
+    } else {
+        ptr_newpath = buf_newpath = _w(private_create_path_from_dirfd)(newdirfd, newpath);
+
+        if (!buf_newpath) {
+            /* errno was set */
+            goto JUMP_CLEANUP;
+        }
+    }
+
+    /* handle case where oldpath is a symbolic link */
+    if (AW(isSymlink)(ptr_oldpath, NULL) == TRUE) {
+        if (!(flags & _AT_SYMLINK_FOLLOW)) {
+            /* don't follow symbolic links */
+            errno = EPERM;
+            goto JUMP_CLEANUP;
+        }
+
+        if ((resolved = AW(getCanonicalPath)(ptr_oldpath)) == NULL) {
+            errno = private_map_winerr_to_errno(GetLastError());
+            goto JUMP_CLEANUP;
+        }
+
+        ptr_oldpath = resolved;
+    }
+
+    /* call link() */
+    ret = _w(link)(ptr_oldpath, ptr_newpath);
+
+JUMP_CLEANUP:
+
+    errsav = errno;
+    free(buf_oldpath);
+    free(buf_newpath);
+    free(resolved);
+    errno = errsav;
+
+    return ret;
+}
+

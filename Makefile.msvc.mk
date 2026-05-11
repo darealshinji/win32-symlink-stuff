@@ -7,7 +7,6 @@ LIB_EXE  = lib.exe
 SRCS = \
 	common_a.c \
 	common_w.c \
-	common_x.c \
 	convert.c \
 	createLinkA.c \
 	createLinkW.c \
@@ -19,8 +18,6 @@ SRCS = \
 	isSymlinkW.c \
 	posix/link_a.c \
 	posix/link_w.c \
-	posix/linkat_a.c \
-	posix/linkat_w.c \
 	posix/lstat.c \
 	posix/lstat64_a.c \
 	posix/lstat64_w.c \
@@ -31,8 +28,6 @@ SRCS = \
 	posix/realpath_w.c \
 	posix/symlink_a.c \
 	posix/symlink_w.c \
-	posix/symlinkat_a.c \
-	posix/symlinkat_w.c \
 	$(NULL)
 
 ARCHIVE = symlink.lib

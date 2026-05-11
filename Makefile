@@ -8,7 +8,6 @@ LDFLAGS   = -s
 OBJS = \
 	source/common_a.o \
 	source/common_w.o \
-	source/common_x.o \
 	source/convert.o \
 	source/createLinkA.o \
 	source/createLinkW.o \
@@ -20,8 +19,6 @@ OBJS = \
 	source/isSymlinkW.o \
 	source/posix/link_a.o \
 	source/posix/link_w.o \
-	source/posix/linkat_a.o \
-	source/posix/linkat_w.o \
 	source/posix/lstat.o \
 	source/posix/lstat64_a.o \
 	source/posix/lstat64_w.o \
@@ -32,8 +29,6 @@ OBJS = \
 	source/posix/realpath_w.o \
 	source/posix/symlink_a.o \
 	source/posix/symlink_w.o \
-	source/posix/symlinkat_a.o \
-	source/posix/symlinkat_w.o \
 	$(NULL)
 
 ARCHIVE = symlink.a

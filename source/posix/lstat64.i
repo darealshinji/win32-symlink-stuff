@@ -32,6 +32,7 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include "w32-symlink.h"
+#include "w32-symlink-posix.h"
 #include "convert.h"
 #include "common.h"
 #include "helper.h"
@@ -84,6 +85,25 @@ int _xlstat64(const xchar_t *pathname, struct _stat64 *statbuf)
     errsav = errno;
     _close(fd);
     errno = errsav;
+
+    return rv;
+}
+
+#else /* !UTF8_EVERYWHERE && !WIDE_CHAR_API */
+
+int _lstat64(const char *pathname, struct _stat64 *statbuf)
+{
+    wchar_t *wcs_path;
+    int rv;
+
+    if (!pathname || !*pathname || !statbuf) {
+        errno = EINVAL; /* Invalid argument */
+        return -1;
+    }
+
+    wcs_path = convert_str_to_wcs(pathname);
+    rv = _lwstat64(wcs_path, statbuf);
+    free(wcs_path);
 
     return rv;
 }

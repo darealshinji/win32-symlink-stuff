@@ -21,84 +21,34 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE
  */
-#undef WIDE_CHAR_API
 #undef _UNICODE
 #undef UNICODE
 #include <windows.h>
 #include <winioctl.h> /* FSCTL_GET_REPARSE_POINT */
 #include <wchar.h>
-#include <errno.h>
 #include <inttypes.h>
 #include <stdlib.h>
 #include <string.h>
 #include "w32-symlink.h"
+#include "convert.h"
+#include "helper.h"
 #include "common.h"
 #include "reparse_data_buffer.h"
 
 
 
-/* try to map some Windows error codes that might appear
- * to an errno value (mostly file operation error codes) */
-int private_map_winerr_to_errno(DWORD dwErr)
+#ifdef WIDE_CHAR_API
+
+typedef struct {
+  ULONG    tag;
+  wchar_t *wide_string;
+  char    *utf8_string;
+} LINK_TARGET;
+
+
+static BOOL get_link_target(const wchar_t *path, LINK_TARGET *ltarget)
 {
-    switch (dwErr)
-    {
-    case ERROR_SUCCESS:
-        return 0;
-
-    case ERROR_FILE_NOT_FOUND:
-    case ERROR_PATH_NOT_FOUND:
-        return ENOENT;
-
-    case ERROR_BAD_UNIT:
-        return ENODEV;
-
-    case ERROR_FILE_EXISTS:
-        return EEXIST;
-
-    case ERROR_FILE_TOO_LARGE:
-        return EFBIG;
-
-    case ERROR_NOT_ENOUGH_MEMORY:
-        return ENOMEM;
-
-    case ERROR_OPERATION_IN_PROGRESS:
-        return EINPROGRESS;
-
-    case ERROR_INVALID_PARAMETER:
-        return EINVAL;
-
-    case ERROR_TOO_MANY_OPEN_FILES:
-        return EMFILE;
-
-    case ERROR_TOO_MANY_LINKS:
-        return EMLINK;
-
-    case ERROR_FILENAME_EXCED_RANGE:
-        return ENAMETOOLONG;
-
-    case ERROR_DISK_FULL:
-        return ENOSPC;
-
-    case ERROR_DIR_NOT_EMPTY:
-        return ENOTEMPTY;
-
-    case ERROR_NOT_SUPPORTED:
-        return ENOTSUP;
-
-    case ERROR_BUFFER_OVERFLOW:
-        return EOVERFLOW;
-
-    default:
-        break;
-    }
-
-    return -1;
-}
-
-
-BOOL private_get_link_target_from_handle(HANDLE handle, LINK_TARGET *ltarget)
-{
+    HANDLE handle;
     uint8_t data[MAXIMUM_REPARSE_DATA_BUFFER_SIZE];
     uint8_t *pDataEnd;
     REPARSE_DATA_BUFFER *pData;
@@ -109,6 +59,35 @@ BOOL private_get_link_target_from_handle(HANDLE handle, LINK_TARGET *ltarget)
     LXSS_SYMLINK_REPARSE_BUFFER *pLxSym;
     wchar_t *wstr;
     size_t off, len, i, buflen, maxlen;
+
+    switch (AW(isSymlink)(path, NULL))
+    {
+        /* it's a symlink */
+        case TRUE:
+            break;
+
+        /* path exists but is not a symbolic link */
+        case FALSE:
+            SetLastError(ERROR_NOT_SUPPORTED);
+            return FALSE;
+
+        /* error */
+        default:
+            return FALSE;
+    }
+
+    /* open path for reading */
+    handle = AW(CreateFile)(path,
+                            0,
+                            FILE_SHARE_READ | FILE_SHARE_WRITE,
+                            NULL,
+                            OPEN_EXISTING,
+                            FILE_FLAG_OPEN_REPARSE_POINT | FILE_FLAG_BACKUP_SEMANTICS,
+                            NULL);
+
+    if (handle == INVALID_HANDLE_VALUE) {
+        return FALSE;
+    }
 
     pData = (REPARSE_DATA_BUFFER *)data;
     pDataEnd = data + (MAXIMUM_REPARSE_DATA_BUFFER_SIZE - 1);
@@ -247,3 +226,45 @@ BOOL private_get_link_target_from_handle(HANDLE handle, LINK_TARGET *ltarget)
 
     return TRUE;
 }
+
+
+wchar_t *getLinkTargetW(const wchar_t *path, ULONG *tag)
+{
+    LINK_TARGET ltarget = { 0, NULL, NULL };
+    wchar_t *wstr = NULL;
+
+    if (!path || !get_link_target(path, &ltarget)) {
+        return NULL;
+    }
+
+    if (tag) *tag = ltarget.tag;
+
+    if (ltarget.wide_string) {
+        wstr = ltarget.wide_string;
+    } else if (ltarget.utf8_string) {
+        wstr = convert_utf8_to_wcs(ltarget.utf8_string);
+        free(ltarget.utf8_string);
+    }
+
+    return wstr;
+}
+
+#else
+
+char *getLinkTargetA(const char *path, ULONG *tag)
+{
+    wchar_t *wpath, *wstr;
+    char *str;
+
+    wpath = convert_str_to_wcs(path);
+    wstr = getLinkTargetW(wpath, tag);
+    str = convert_wcs_to_str(wstr);
+
+    free(wpath);
+    free(wstr);
+
+    return str;
+}
+
+#endif
+

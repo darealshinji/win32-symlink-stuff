@@ -30,25 +30,11 @@
 #include <wchar.h>
 
 
-typedef struct {
-  ULONG    tag;
-  wchar_t *wide_string;
-  char    *utf8_string;
-} LINK_TARGET;
-
 
 int private_map_winerr_to_errno(DWORD dwErr);
 
 BOOL  _private_is_absolute_path(const char *p);
 BOOL _wprivate_is_absolute_path(const wchar_t *p);
-
-char     *_private_return_path(char *ptr, char *buf, size_t numcs);
-wchar_t *_wprivate_return_path(wchar_t *ptr, wchar_t *buf, size_t numcs);
-
-BOOL private_get_link_target_from_handle(HANDLE handle, LINK_TARGET *ltarget);
-
-BOOL  _private_get_link_target_open_file(const char *path, LINK_TARGET *ltarget);
-BOOL _wprivate_get_link_target_open_file(const wchar_t *path, LINK_TARGET *ltarget);
 
 char     *_private_create_path_from_dirfd(int dirfd, const char *addpath);
 wchar_t *_wprivate_create_path_from_dirfd(int dirfd, const wchar_t *addpath);

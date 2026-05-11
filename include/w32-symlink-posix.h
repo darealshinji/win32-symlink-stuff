@@ -72,8 +72,8 @@ typedef int ssize_t;
 #endif
 
 
-#define _AT_FDCWD               -100    /* Special value used to indicate the *at functions
-                                         * should use the current working directory. */
+#define _AT_FDCWD               -100    /* Special value used to indicate the *at functions */
+                                        /* should use the current working directory. */
 #define _AT_SYMLINK_FOLLOW      0x400   /* Follow symbolic links. */
 
 #ifndef NO_OLDNAMES
@@ -82,7 +82,7 @@ typedef int ssize_t;
 #endif
 
 #ifndef PATH_MAX
-#define PATH_MAX                MAX_PATH
+#define PATH_MAX                MAX_PATH /* 260 characters */
 #endif
 
 
@@ -412,6 +412,8 @@ inline char *canonicalize_file_name(const char *path) {
  * _lstat is identical to _stat, except that if path is a symbolic link it
  * will provide information about the link itself instead of the target
  * that the link points to.
+ *
+ * If in doubt which function to pick, use _lstat64() or _lwstat64().
  */
 
 #ifdef _UNICODE

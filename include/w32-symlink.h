@@ -40,6 +40,14 @@ extern "C" {
 
 
 
+#ifdef __GNUC__
+#define __WARN_UNUSED_RESULT  __attribute__((warn_unused_result))
+#else
+#define __WARN_UNUSED_RESULT  /**/
+#endif
+
+
+
 /* https://learn.microsoft.com/en-us/openspecs/windows_protocols/ms-fscc/c8e77b37-3909-4fe6-a4ea-2b9d423b1ee4 */
 #ifndef IO_REPARSE_TAG_SYMLINK
 #define IO_REPARSE_TAG_SYMLINK      (0xA000000C)
@@ -102,8 +110,8 @@ BOOL createLinkW(const wchar_t *lpLinkName, const wchar_t *lpTargetName, char mo
 #define getCanonicalPath getCanonicalPathA
 #endif
 
-char    *getCanonicalPathA(const char *lpFileName);
-wchar_t *getCanonicalPathW(const wchar_t *lpFileName);
+char    *getCanonicalPathA(const char *lpFileName) __WARN_UNUSED_RESULT;
+wchar_t *getCanonicalPathW(const wchar_t *lpFileName) __WARN_UNUSED_RESULT;
 
 
 

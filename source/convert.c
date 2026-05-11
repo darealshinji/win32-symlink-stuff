@@ -29,50 +29,51 @@
 #include <string.h>
 
 
-wchar_t *convert_utf8_to_wcs(const char *lpStr)
+wchar_t *convert_utf8_to_wcs(const char *str)
 {
-    int wlen, mbslen;
-    wchar_t *pwBuf = NULL;
+    int len;
+    wchar_t *buf;
 
-    if (!lpStr) return NULL;
+    if (!str) return NULL;
 
-    mbslen = (int)strlen(lpStr);
-    wlen = MultiByteToWideChar(CP_UTF8, 0, lpStr, mbslen, NULL, 0);
-    if (wlen < 1) return NULL;
+    len = MultiByteToWideChar(CP_UTF8, 0, str, -1, NULL, 0);
+    if (len < 1) return NULL;
 
-    pwBuf = malloc((wlen + 1) * sizeof(wchar_t));
-    if (!pwBuf) return NULL;
-
-    if (MultiByteToWideChar(CP_UTF8, 0, lpStr, mbslen, pwBuf, wlen) < 1) {
-        free(pwBuf);
-        return NULL;
-    }
-
-    pwBuf[wlen] = 0;
-    return pwBuf;
-}
-
-
-char *convert_wcs_to_str(const wchar_t *lpWstr)
-{
-    size_t mbslen, n;
-    char *buf;
-
-    if (!lpWstr) return NULL;
-
-    if (wcstombs_s(&mbslen, NULL, 0, lpWstr, 0) != 0 || mbslen == 0) {
-        return NULL;
-    }
-
-    buf = malloc(mbslen + 1);
+    buf = malloc((len + 1) * sizeof(wchar_t));
     if (!buf) return NULL;
 
-    if (wcstombs_s(&n, buf, mbslen+1, lpWstr, mbslen) != 0 || n == 0) {
+    if (MultiByteToWideChar(CP_UTF8, 0, str, -1, buf, len) < 1) {
         free(buf);
         return NULL;
     }
 
-    buf[mbslen] = 0;
+    buf[len] = 0;
+
+    return buf;
+}
+
+
+char *convert_wcs_to_str(const wchar_t *wstr)
+{
+    size_t len, n;
+    char *buf;
+
+    if (!wstr) return NULL;
+
+    if (wcstombs_s(&len, NULL, 0, wstr, 0) != 0 || len == 0) {
+        return NULL;
+    }
+
+    buf = malloc(len + 1);
+    if (!buf) return NULL;
+
+    if (wcstombs_s(&n, buf, len+1, wstr, len) != 0 || n == 0) {
+        free(buf);
+        return NULL;
+    }
+
+    buf[len] = 0;
+
     return buf;
 }
 

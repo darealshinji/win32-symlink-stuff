@@ -31,39 +31,41 @@
 #include "convert.h"
 
 
-/* the stat() API on Windows is a mess ... */
-
-#define COPY_BUFFER(TIME, SIZE) \
-    buffer->st_dev = st.st_dev; \
-    buffer->st_ino = st.st_ino; \
-    buffer->st_mode = st.st_mode; \
-    buffer->st_nlink = st.st_nlink; \
-    buffer->st_uid = st.st_uid; \
-    buffer->st_gid = st.st_gid; \
-    buffer->st_rdev = st.st_rdev; \
-    buffer->st_size = (SIZE) st.st_size; \
-    buffer->st_atime = (TIME) st.st_atime; \
-    buffer->st_mtime = (TIME) st.st_mtime; \
-    buffer->st_ctime = (TIME) st.st_ctime;
+/* https://learn.microsoft.com/cpp/c-runtime-library/reference/stat-functions */
 
 
-#define IMPLEMENT_LSTAT(LSTAT, LWSTAT, TYPE, TIME, SIZE) \
-    int LSTAT(const char *path, struct TYPE *buffer) \
+#define MAKE_FUNC(FUNC, LSTAT64, XCHAR, STATBUF, TIME, SIZE) \
+    int FUNC(const XCHAR *path, struct STATBUF *sb) \
     { \
         struct _stat64 st; \
-        int rv = _lstat64(path, &st); \
-        if (rv == 0) { COPY_BUFFER(TIME, SIZE); } \
-        return rv; \
-    } \
-\
-    int LWSTAT(const wchar_t *path, struct TYPE *buffer) \
-    { \
-        struct _stat64 st; \
-        int rv = _lwstat64(path, &st); \
-        if (rv == 0) { COPY_BUFFER(TIME, SIZE); } \
+        int rv; \
+        \
+        /* need to check at least 'sb' here, 'path' is */ \
+        /* also checked by the stat functions */ \
+        if (!path || !*path || !sb) { \
+            errno = EINVAL; \
+            return -1; \
+        }  \
+        \
+        if ((rv = LSTAT64(path, &st)) == 0) { \
+            sb->st_dev   = st.st_dev; \
+            sb->st_ino   = st.st_ino; \
+            sb->st_mode  = st.st_mode; \
+            sb->st_nlink = st.st_nlink; \
+            sb->st_uid   = st.st_uid; \
+            sb->st_gid   = st.st_gid; \
+            sb->st_rdev  = st.st_rdev; \
+            sb->st_size  = (SIZE)(st.st_size); \
+            sb->st_atime = (TIME)(st.st_atime); \
+            sb->st_mtime = (TIME)(st.st_mtime); \
+            sb->st_ctime = (TIME)(st.st_ctime); \
+        } \
         return rv; \
     }
 
+#define IMPLEMENT_LSTAT(LSTAT, LWSTAT, STATBUF, TIME, SIZE) \
+    MAKE_FUNC(LSTAT,  _lstat64,  char,    STATBUF, TIME, SIZE) \
+    MAKE_FUNC(LWSTAT, _lwstat64, wchar_t, STATBUF, TIME, SIZE)
 
 IMPLEMENT_LSTAT ( lstat,       lwstat,       stat,        time_t,    _off_t)
 IMPLEMENT_LSTAT (_lstat,      _lwstat,      _stat,        time_t,    _off_t)

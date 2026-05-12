@@ -21,6 +21,7 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE
  */
+#undef WIDE_CHAR_API
 #undef _UNICODE
 #undef UNICODE
 #include <windows.h>
@@ -36,9 +37,6 @@
 #include "reparse_data_buffer.h"
 
 
-
-#ifdef WIDE_CHAR_API
-
 typedef struct {
   ULONG    tag;
   wchar_t *wide_string;
@@ -46,8 +44,11 @@ typedef struct {
 } LINK_TARGET;
 
 
-static BOOL get_link_target(const wchar_t *path, LINK_TARGET *ltarget)
+
+static BOOL get_link_target(const wchar_t *wpath, const char *path, LINK_TARGET *ltarget)
 {
+    const DWORD dwShare = FILE_SHARE_READ | FILE_SHARE_WRITE;
+    const DWORD dwFlags = FILE_FLAG_OPEN_REPARSE_POINT | FILE_FLAG_BACKUP_SEMANTICS;
     HANDLE handle;
     uint8_t data[MAXIMUM_REPARSE_DATA_BUFFER_SIZE];
     uint8_t *pDataEnd;
@@ -59,8 +60,12 @@ static BOOL get_link_target(const wchar_t *path, LINK_TARGET *ltarget)
     LXSS_SYMLINK_REPARSE_BUFFER *pLxSym;
     wchar_t *wstr;
     size_t off, len, i, buflen, maxlen;
+    int ret;
 
-    switch (AW(isSymlink)(path, NULL))
+    /* first check if path exists and is a symbolic link */
+    ret = wpath ? isSymlinkW(wpath, NULL) : isSymlinkA(path, NULL);
+
+    switch (ret)
     {
         /* it's a symlink */
         case TRUE:
@@ -77,24 +82,15 @@ static BOOL get_link_target(const wchar_t *path, LINK_TARGET *ltarget)
     }
 
     /* open path for reading */
-    handle = AW(CreateFile)(path,
-                            0,
-                            FILE_SHARE_READ | FILE_SHARE_WRITE,
-                            NULL,
-                            OPEN_EXISTING,
-                            FILE_FLAG_OPEN_REPARSE_POINT | FILE_FLAG_BACKUP_SEMANTICS,
-                            NULL);
+    if (wpath) {
+        handle = CreateFileW(wpath, 0, dwShare, NULL, OPEN_EXISTING, dwFlags, NULL);
+    } else {
+        handle = CreateFileA(path, 0, dwShare, NULL, OPEN_EXISTING, dwFlags, NULL);
+    }
 
     if (handle == INVALID_HANDLE_VALUE) {
         return FALSE;
     }
-
-    pData = (REPARSE_DATA_BUFFER *)data;
-    pDataEnd = data + (MAXIMUM_REPARSE_DATA_BUFFER_SIZE - 1);
-    maxlen = MAXIMUM_REPARSE_DATA_BUFFER_SIZE -
-             (sizeof(pData->ReparseTag) +
-              sizeof(pData->ReparseDataLength) +
-              sizeof(pData->Reserved));
 
     /* retrieve reparse data */
     if (!DeviceIoControl(handle,
@@ -111,6 +107,13 @@ static BOOL get_link_target(const wchar_t *path, LINK_TARGET *ltarget)
     }
 
     CloseHandle(handle);
+
+    pData = (REPARSE_DATA_BUFFER *)data;
+    pDataEnd = data + (MAXIMUM_REPARSE_DATA_BUFFER_SIZE - 1);
+    maxlen = MAXIMUM_REPARSE_DATA_BUFFER_SIZE -
+             (sizeof(pData->ReparseTag) +
+              sizeof(pData->ReparseDataLength) +
+              sizeof(pData->Reserved));
 
     /* check if length exceeds buffer size */
     if (pData->ReparseDataLength >= maxlen) {
@@ -228,43 +231,101 @@ static BOOL get_link_target(const wchar_t *path, LINK_TARGET *ltarget)
 }
 
 
-wchar_t *getLinkTargetW(const wchar_t *path, ULONG *tag)
+static char *convert_target_path(LINK_TARGET *ltarget)
+{
+    wchar_t *wstr = NULL;
+    char *str = NULL;
+
+    if (ltarget->wide_string) {
+        return convert_wcs_to_str(ltarget->wide_string);
+    } else if (ltarget->utf8_string) {
+#ifdef UTF8_EVERYWHERE
+        /* return allocated UTF-8 string */
+        str = ltarget->utf8_string;
+        ltarget->utf8_string = NULL;
+        (void)wstr;
+#else
+        /* double conversion */
+        wstr = convert_utf8_to_wcs(ltarget->utf8_string);
+        str = convert_wcs_to_str(wstr);
+        free(wstr);
+#endif
+    }
+
+    return str;
+}
+
+
+wchar_t *getLinkTargetW(const wchar_t *wpath, ULONG *tag)
 {
     LINK_TARGET ltarget = { 0, NULL, NULL };
     wchar_t *wstr = NULL;
 
-    if (!path || !get_link_target(path, &ltarget)) {
+    if (tag) {
+        *tag = 0;
+    }
+
+    if (!wpath || !*wpath) {
+        SetLastError(ERROR_INVALID_PARAMETER);
+        return NULL;
+    }
+
+    /* read link data */
+    if (!get_link_target(wpath, NULL, &ltarget)) {
         return NULL;
     }
 
     if (tag) *tag = ltarget.tag;
 
     if (ltarget.wide_string) {
+        /* return allocated string */
         wstr = ltarget.wide_string;
+        ltarget.wide_string = NULL;
     } else if (ltarget.utf8_string) {
         wstr = convert_utf8_to_wcs(ltarget.utf8_string);
-        free(ltarget.utf8_string);
     }
+
+    free(ltarget.wide_string);
+    free(ltarget.utf8_string);
 
     return wstr;
 }
 
-#else
 
 char *getLinkTargetA(const char *path, ULONG *tag)
 {
-    wchar_t *wpath, *wstr;
-    char *str;
+    LINK_TARGET ltarget = { 0, NULL, NULL };
+    wchar_t *wpath = NULL;
+    char *str = NULL;
 
+    if (tag) {
+        *tag = 0;
+    }
+
+    if (!path || !*path) {
+        SetLastError(ERROR_INVALID_PARAMETER);
+        return NULL;
+    }
+
+#ifndef UTF8_EVERYWHERE
+    /* convert input path string */
     wpath = convert_str_to_wcs(path);
-    wstr = getLinkTargetW(wpath, tag);
-    str = convert_wcs_to_str(wstr);
+    path = NULL;
+#endif
 
+    /* read link data */
+    if (!get_link_target(wpath, path, &ltarget)) {
+        return NULL;
+    }
+
+    if (tag) *tag = ltarget.tag;
+
+    str = convert_target_path(&ltarget);
+
+    free(ltarget.wide_string);
+    free(ltarget.utf8_string);
     free(wpath);
-    free(wstr);
 
     return str;
 }
-
-#endif
 

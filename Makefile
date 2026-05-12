@@ -13,8 +13,7 @@ OBJS = \
 	source/createLinkW.o \
 	source/getCanonicalPathA.o \
 	source/getCanonicalPathW.o \
-	source/getLinkTargetA.o \
-	source/getLinkTargetW.o \
+	source/getLinkTarget.o \
 	source/isSymlinkA.o \
 	source/isSymlinkW.o \
 	source/posix/link_a.o \

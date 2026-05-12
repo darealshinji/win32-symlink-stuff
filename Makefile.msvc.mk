@@ -12,8 +12,7 @@ SRCS = \
 	createLinkW.c \
 	getCanonicalPathA.c \
 	getCanonicalPathW.c \
-	getLinkTargetA.c \
-	getLinkTargetW.c \
+	getLinkTarget.c \
 	isSymlinkA.c \
 	isSymlinkW.c \
 	posix/link_a.c \

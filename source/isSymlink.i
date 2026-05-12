@@ -49,6 +49,11 @@ int AW(isSymlink)(const xchar_t *path, ULONG *tag)
         *tag = 0;
     }
 
+    if (!path || !*path) {
+        SetLastError(ERROR_INVALID_PARAMETER);
+        return -1;
+    }
+
     dwAttr = AW(GetFileAttributes)(path);
 
     if (dwAttr == INVALID_FILE_ATTRIBUTES) {
@@ -116,6 +121,33 @@ int AW(isSymlink)(const xchar_t *path, ULONG *tag)
     }
 
     return FALSE;
+}
+
+
+#else /* !UTF8_EVERYWHERE && !WIDE_CHAR_API */
+
+
+int isSymlinkA(const char *path, ULONG *tag)
+{
+    int rv;
+    wchar_t *wstr;
+
+    if (tag) {
+        *tag = 0;
+    }
+
+    if (!path || !*path) {
+        SetLastError(ERROR_INVALID_PARAMETER);
+        return -1;
+    }
+
+    wstr = convert_str_to_wcs(path);
+    if (!wstr) return -1;
+
+    rv = isSymlinkW(wstr, tag);
+    free(wstr);
+
+    return rv;
 }
 
 #endif

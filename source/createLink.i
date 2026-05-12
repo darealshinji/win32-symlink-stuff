@@ -31,6 +31,9 @@
 #include "helper.h"
 
 
+
+#if defined(UTF8_EVERYWHERE) || defined(WIDE_CHAR_API)
+
 #undef createLink
 
 /* https://learn.microsoft.com/en-us/windows/win32/api/winbase/nf-winbase-createsymboliclinkw */
@@ -47,11 +50,14 @@ extern BOOLEAN CreateSymbolicLinkW(LPCWSTR lpSymlinkFileName, LPCWSTR lpTargetFi
 #endif
 
 
-#if defined(UTF8_EVERYWHERE) || defined(WIDE_CHAR_API)
-
 BOOL AW(createLink)(const xchar_t *link, const xchar_t *target, char mode)
 {
     DWORD flags = SYMBOLIC_LINK_FLAG_ALLOW_UNPRIVILEGED_CREATE;
+
+    if (!link || !*link || !target || !*target) {
+        SetLastError(ERROR_INVALID_PARAMETER);
+        return FALSE;
+    }
 
     switch (mode) {
         case 'h':
@@ -76,6 +82,40 @@ BOOL AW(createLink)(const xchar_t *link, const xchar_t *target, char mode)
     flags &= ~SYMBOLIC_LINK_FLAG_ALLOW_UNPRIVILEGED_CREATE;
 
     return AW(CreateSymbolicLink)(link, target, flags);
+}
+
+
+#else /* !UTF8_EVERYWHERE && !WIDE_CHAR_API */
+
+
+BOOL createLinkA(const char *link, const char *target, char mode)
+{
+    wchar_t *wcs_link, *wcs_target;
+    BOOL ret;
+
+    if (!link || !*link || !target || !*target) {
+        SetLastError(ERROR_INVALID_PARAMETER);
+        return FALSE;
+    }
+
+    /* convert strings */
+    wcs_link = convert_str_to_wcs(link);
+    if (!wcs_link) return FALSE;
+
+    wcs_target = convert_str_to_wcs(target);
+
+    if (!wcs_target) {
+        free(wcs_link);
+        return FALSE;
+    }
+
+    /* call wide character function */
+    ret = createLinkW(wcs_link, wcs_target, mode);
+
+    free(wcs_link);
+    free(wcs_target);
+
+    return ret;
 }
 
 #endif

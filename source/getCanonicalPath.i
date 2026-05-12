@@ -29,9 +29,13 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include "w32-symlink.h"
+#include "convert.h"
 #include "common.h"
 #include "helper.h"
 
+
+
+#if defined(UTF8_EVERYWHERE) || defined(WIDE_CHAR_API)
 
 #undef getCanonicalPath
 
@@ -40,8 +44,6 @@ extern DWORD GetFinalPathNameByHandleA(HANDLE hFile, LPSTR lpszFilePath, DWORD c
 extern DWORD GetFinalPathNameByHandleW(HANDLE hFile, LPWSTR lpszFilePath, DWORD cchFilePath, DWORD dwFlags);
 #endif
 
-
-#if defined(UTF8_EVERYWHERE) || defined(WIDE_CHAR_API)
 
 /**
  * Result must be deallocated with free().
@@ -98,6 +100,11 @@ xchar_t *AW(getCanonicalPath)(const xchar_t *path)
     xchar_t *buf, *link;
     ULONG tag = 0;
 
+    if (!path || !*path) {
+        SetLastError(ERROR_INVALID_PARAMETER);
+        return FALSE;
+    }
+
     buf = canonical_path(path);
     if (buf) return buf;
 
@@ -125,6 +132,36 @@ xchar_t *AW(getCanonicalPath)(const xchar_t *path)
     }
 
     free(link);
+
+    return buf;
+}
+
+
+#else /* !UTF8_EVERYWHERE && !WIDE_CHAR_API */
+
+
+char *getCanonicalPathA(const char *path)
+{
+    wchar_t *wcs_in, *wcs_out;
+    char *buf;
+
+    if (!path || !*path) {
+        SetLastError(ERROR_INVALID_PARAMETER);
+        return FALSE;
+    }
+
+    /* convert string */
+    wcs_in = convert_str_to_wcs(path);
+    if (!wcs_in) return NULL;
+
+    /* call wide character function */
+    wcs_out = getCanonicalPathW(wcs_in);
+    free(wcs_in);
+    if (!wcs_out) return NULL;
+
+    /* convert string */
+    buf = convert_wcs_to_str(wcs_out);
+    free(wcs_out);
 
     return buf;
 }

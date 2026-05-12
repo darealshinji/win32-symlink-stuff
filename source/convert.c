@@ -1,7 +1,7 @@
 /**
  * The MIT License (MIT)
  *
- * Copyright (C) 2023-2025 Carsten Janssen
+ * Copyright (C) 2023-2026 Carsten Janssen
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -29,20 +29,21 @@
 #include <string.h>
 
 
-wchar_t *convert_utf8_to_wcs(const char *str)
+wchar_t *convert_utf8_to_wcs(const char *u8str)
 {
     int len;
     wchar_t *buf;
 
-    if (!str) return NULL;
+    if (!u8str) return NULL;
+    if (!*u8str) return _wcsdup(L"");
 
-    len = MultiByteToWideChar(CP_UTF8, 0, str, -1, NULL, 0);
+    len = MultiByteToWideChar(CP_UTF8, 0, u8str, -1, NULL, 0);
     if (len < 1) return NULL;
 
     buf = malloc((len + 1) * sizeof(wchar_t));
     if (!buf) return NULL;
 
-    if (MultiByteToWideChar(CP_UTF8, 0, str, -1, buf, len) < 1) {
+    if (MultiByteToWideChar(CP_UTF8, 0, u8str, -1, buf, len) < 1) {
         free(buf);
         return NULL;
     }
@@ -59,6 +60,7 @@ char *convert_wcs_to_str(const wchar_t *wstr)
     char *buf;
 
     if (!wstr) return NULL;
+    if (!*wstr) return _strdup("");
 
     if (wcstombs_s(&len, NULL, 0, wstr, 0) != 0 || len == 0) {
         return NULL;
@@ -84,6 +86,7 @@ wchar_t *convert_str_to_wcs(const char *str)
     wchar_t *buf;
 
     if (!str) return NULL;
+    if (!*str) return _wcsdup(L"");
 
     if (mbstowcs_s(&len, NULL, 0, str, 0) != 0 || len == 0) {
         return NULL;

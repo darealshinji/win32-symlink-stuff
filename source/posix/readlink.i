@@ -139,9 +139,9 @@ ssize_t _w(readlinkat)(int dirfd, const xchar_t *path, xchar_t *buf, size_t numc
         numcs = SSIZE_MAX;
     }
 
-    /* if special value AT_FDCWD is used or it's an absolute path,
+    /* if special value _AT_FDCWD is used or it's an absolute path,
      * the behavior is exactly like readlink() */
-    if (dirfd == AT_FDCWD || _w(private_is_absolute_path)(path)) {
+    if (dirfd == _AT_FDCWD || _w(private_is_absolute_path)(path)) {
         return xreadlink(path, buf, numcs);
     }
 
@@ -173,9 +173,9 @@ xchar_t *_w(readlinkat_s)(int dirfd, const xchar_t *path, xchar_t *buf, size_t n
         return NULL;
     }
 
-    /* if special value AT_FDCWD is used or it's an absolute path,
+    /* if special value _AT_FDCWD is used or it's an absolute path,
      * the behavior is exactly like readlink_s() */
-    if (dirfd == AT_FDCWD || _w(private_is_absolute_path)(path)) {
+    if (dirfd == _AT_FDCWD || _w(private_is_absolute_path)(path)) {
         return _w(readlink_s)(path, buf, numcs);
     }
 

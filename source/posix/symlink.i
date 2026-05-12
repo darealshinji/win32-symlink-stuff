@@ -46,7 +46,6 @@ static BOOL target_is_directory(const xchar_t *target)
 
 #else
 
-    /* convert string to wchar_t */
     if ((wcs_target = convert_str_to_wcs(target)) == NULL) {
         return FALSE;
     }
@@ -69,6 +68,7 @@ int _w(symlink)(const xchar_t *target, const xchar_t *linkpath)
         return -1;
     }
 
+    /* automatic detection if target is a directory */
     if (target_is_directory(target)) {
         mode = 'D';
     }

@@ -142,25 +142,23 @@ xchar_t *AW(getCanonicalPath)(const xchar_t *path)
 
 char *getCanonicalPathA(const char *path)
 {
-    wchar_t *wcs_in, *wcs_out;
-    char *buf;
+    wchar_t *wcs_in = NULL;
+    wchar_t *wcs_out = NULL;
+    char *buf = NULL;
 
     if (!path || !*path) {
         SetLastError(ERROR_INVALID_PARAMETER);
         return FALSE;
     }
 
-    /* convert string */
-    wcs_in = convert_str_to_wcs(path);
-    if (!wcs_in) return NULL;
+    /* convert strings and call wide character function */
+    if ((wcs_in = convert_str_to_wcs(path)) != NULL &&
+        (wcs_out = getCanonicalPathW(wcs_in)) != NULL)
+    {
+        buf = convert_wcs_to_str(wcs_out);
+    }
 
-    /* call wide character function */
-    wcs_out = getCanonicalPathW(wcs_in);
     free(wcs_in);
-    if (!wcs_out) return NULL;
-
-    /* convert string */
-    buf = convert_wcs_to_str(wcs_out);
     free(wcs_out);
 
     return buf;

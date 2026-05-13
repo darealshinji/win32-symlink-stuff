@@ -90,27 +90,21 @@ BOOL AW(createLink)(const xchar_t *link, const xchar_t *target, char mode)
 
 BOOL createLinkA(const char *link, const char *target, char mode)
 {
-    wchar_t *wcs_link, *wcs_target;
-    BOOL ret;
+    wchar_t *wcs_link = NULL;
+    wchar_t *wcs_target = NULL;
+    BOOL ret = FALSE;
 
     if (!link || !*link || !target || !*target) {
         SetLastError(ERROR_INVALID_PARAMETER);
         return FALSE;
     }
 
-    /* convert strings */
-    wcs_link = convert_str_to_wcs(link);
-    if (!wcs_link) return FALSE;
-
-    wcs_target = convert_str_to_wcs(target);
-
-    if (!wcs_target) {
-        free(wcs_link);
-        return FALSE;
+    /* convert strings and call wide character function */
+    if ((wcs_link = convert_str_to_wcs(link)) != NULL &&
+        (wcs_target = convert_str_to_wcs(target)) != NULL)
+    {
+        ret = createLinkW(wcs_link, wcs_target, mode);
     }
-
-    /* call wide character function */
-    ret = createLinkW(wcs_link, wcs_target, mode);
 
     free(wcs_link);
     free(wcs_target);

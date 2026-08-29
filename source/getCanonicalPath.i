@@ -140,6 +140,9 @@ xchar_t *AW(getCanonicalPath)(const xchar_t *path)
 #else /* !UTF8_EVERYWHERE && !WIDE_CHAR_API */
 
 
+/**
+ * Result must be deallocated with free().
+ */
 char *getCanonicalPathA(const char *path)
 {
     wchar_t *wcs_in = NULL;
@@ -148,7 +151,7 @@ char *getCanonicalPathA(const char *path)
 
     if (!path || !*path) {
         SetLastError(ERROR_INVALID_PARAMETER);
-        return FALSE;
+        return NULL;
     }
 
     /* convert strings and call wide character function */

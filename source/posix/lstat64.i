@@ -40,6 +40,7 @@
 
 #if defined(UTF8_EVERYWHERE) || defined(WIDE_CHAR_API)
 
+/* _lstat64 / _lwstat64 */
 int _xlstat64(const xchar_t *pathname, struct _stat64 *statbuf)
 {
     int fd, errsav, rv;

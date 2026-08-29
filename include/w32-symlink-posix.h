@@ -42,6 +42,14 @@ extern "C" {
 #endif
 
 
+#undef __WARN_UNUSED_RESULT
+#ifdef __GNUC__
+#define __WARN_UNUSED_RESULT  __attribute__((warn_unused_result))
+#else
+#define __WARN_UNUSED_RESULT  /**/
+#endif
+
+
 #ifdef __GNUC__
 #define __DEPRECATED  __attribute__((deprecated))
 #elif defined(_MSC_VER)
@@ -94,8 +102,8 @@ typedef int ssize_t;
 /**
  * Creates a symbolic link named 'linkpath' pointing to the target named 'target'.
  *
- * On success, zero is returned.
- * On error, -1 is returned, and errno is set to indicate the error.
+ * On success 0 is returned.
+ * On error -1 is returned and errno is set to indicate the error.
  */
 
 #ifdef _UNICODE
@@ -127,8 +135,8 @@ inline int symlink(const char *target, const char *linkpath) {
  *
  * If linkpath is absolute then newdirfd is ignored.
  *
- * On success, zero is returned.
- * On error, -1 is returned, and errno is set to indicate the error.
+ * On success 0 is returned.
+ * On error -1 is returned and errno is set to indicate the error.
  */
 
 #ifdef _UNICODE
@@ -152,8 +160,8 @@ inline int symlinkat(const char *target, int newdirfd, const char *linkpath) {
  * Creates a new link (also known as a hard link) named 'newpath' to an existing
  * file named 'oldpath'.
  *
- * On success, zero is returned.
- * On error, -1 is returned, and errno is set to indicate the error.
+ * On success 0 is returned.
+ * On error -1 is returned and errno is set to indicate the error.
  */
 
 #ifdef _UNICODE
@@ -186,8 +194,8 @@ inline int link(const char *oldpath, const char *newpath) {
  * If oldpath is absolute, then olddirfd is ignored.
  * The parameters newdirfd and newpath are handled the same way.
  *
- * On success, zero is returned.
- * On error, -1 is returned, and errno is set to indicate the error.
+ * On success 0 is returned.
+ * On error -1 is returned and errno is set to indicate the error.
  */
 
 #ifdef _UNICODE
@@ -219,7 +227,7 @@ inline int linkat(int olddirfd, const char *oldpath,
  * is too small to hold all of the contents.
  *
  * On success the string/character length of the link target is returned.
- * On error, -1 is returned, and errno is set to indicate the error.
+ * On error -1 is returned and errno is set to indicate the error.
  *
  * This function is deprecated in favor of _treadlink_s.
  */
@@ -252,7 +260,7 @@ __DEPRECATED /* use readlink_s instead! */ ssize_t readlink(
  * will be returned on success. This string must be deallocated with 'free()'.
  *
  * On success a pointer to the buffer is returned.
- * On error, NULL is returned, the contents of 'buf' are undefined and errno
+ * On error NULL is returned, the contents of 'buf' are undefined and errno
  * is set to indicate the error.
  */
 
@@ -286,7 +294,7 @@ inline char *readlink_s(const char *path, char *buf, size_t bufsize) {
  * If path is absolute, then dirfd is ignored.
  *
  * On success the string/character length of the link target is returned.
- * On error, -1 is returned, and errno is set to indicate the error.
+ * On error -1 is returned and errno is set to indicate the error.
  *
  * This function is deprecated in favor of _treadlinkat_s.
  */
@@ -348,11 +356,11 @@ inline char *readlinkat_s(int dirfd, const char *path, char *buf, size_t bufsize
  * Get the canonicalized absolute pathname of 'path' and save it in the buffer
  * pointed to by 'resolved_path' up to a maximum of PATH_MAX bytes.
  *
- * If 'resolved_path' is NULL, an allocated string up to PATH_MAX size will be
+ * If 'resolved_path' is NULL an allocated string up to PATH_MAX size will be
  * returned on success. This string must be deallocated with 'free()'.
  *
  * On success a pointer to the 'resolved_path' is returned.
- * On error, NULL is returned, the contents of 'resolved_path' are undefined and
+ * On error NULL is returned, the contents of 'resolved_path' are undefined and
  * errno is set to indicate the error.
  *
  * This function is deprecated in favor of _tcanonicalize_file_name.
@@ -394,10 +402,11 @@ __DEPRECATED /* use canonicalize_file_name instead! */ char *realpath(
 #define _tcanonicalize_file_name _canonicalize_file_name
 #endif
 
-char     *_canonicalize_file_name(const char *path);
-wchar_t *_wcanonicalize_file_name(const wchar_t *path);
+char     *_canonicalize_file_name(const char *path) __WARN_UNUSED_RESULT;
+wchar_t *_wcanonicalize_file_name(const wchar_t *path) __WARN_UNUSED_RESULT;
 
 #ifndef NO_OLDNAMES
+inline char *canonicalize_file_name(const char *path) __WARN_UNUSED_RESULT;
 inline char *canonicalize_file_name(const char *path) {
     return _canonicalize_file_name(path);
 }
@@ -454,9 +463,6 @@ int _lwstat64i32(const wchar_t *path, struct _stat64i32 *buffer);
 int lstat(const char *path, struct stat *buffer);
 int lwstat(const wchar_t *path, struct stat *buffer);
 #endif
-
-
-#undef __DEPRECATED
 
 
 #ifdef __cplusplus

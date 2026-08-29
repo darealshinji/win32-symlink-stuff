@@ -28,9 +28,9 @@
 
 #include <wchar.h>
 typedef wchar_t  xchar_t;
-#define _T(x)       L##x  /* string literals */
+#define _T(x)       L##x   /* string literals */
 #define _w(x)       _w##x  /* prefix for C API functions */
-#define AW(x)       x##W  /* suffix for Windows API functions */
+#define AW(x)       x##W   /* suffix for Windows API functions */
 
 /* basically TCHAR API */
 #define xstrlen     wcslen

@@ -40,6 +40,7 @@ extern "C" {
 
 
 
+#undef __WARN_UNUSED_RESULT
 #ifdef __GNUC__
 #define __WARN_UNUSED_RESULT  __attribute__((warn_unused_result))
 #else
@@ -122,6 +123,8 @@ wchar_t *getCanonicalPathW(const wchar_t *lpFileName) __WARN_UNUSED_RESULT;
  * pReparseTag is a pointer to the variable where the Reparse Tag will be
  * saved if reading the reparse data was successful. This can be used to
  * figure out what type of link this is. This parameter can be set NULL.
+ *
+ * The result must be deallocated with free().
  */
 
 #ifdef _UNICODE
@@ -130,8 +133,8 @@ wchar_t *getCanonicalPathW(const wchar_t *lpFileName) __WARN_UNUSED_RESULT;
 #define getLinkTarget getLinkTargetA
 #endif
 
-char    *getLinkTargetA(const char *lpFileName, ULONG *pReparseTag);
-wchar_t *getLinkTargetW(const wchar_t *lpFileName, ULONG *pReparseTag);
+char    *getLinkTargetA(const char *lpFileName, ULONG *pReparseTag) __WARN_UNUSED_RESULT;
+wchar_t *getLinkTargetW(const wchar_t *lpFileName, ULONG *pReparseTag) __WARN_UNUSED_RESULT;
 
 
 

@@ -31,7 +31,12 @@
 #include "convert.h"
 
 
-/* https://learn.microsoft.com/cpp/c-runtime-library/reference/stat-functions */
+/**
+ * create the different implementations of lstat functions as wrappers
+ * around _lstat64 and _lwstat64
+ *
+ * https://learn.microsoft.com/cpp/c-runtime-library/reference/stat-functions
+ */
 
 
 #define MAKE_FUNC(FUNC, LSTAT64, XCHAR, STATBUF, TIME, SIZE) \
